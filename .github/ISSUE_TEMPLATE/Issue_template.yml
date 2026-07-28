@@ -29,4 +29,4 @@ body:
       description: 작업하고자 하는 내용의 뷰를 첨부해주세요.
       placeholder: 설명을 작성해주세요.
     validations:
-      required: falses
+      required: false
