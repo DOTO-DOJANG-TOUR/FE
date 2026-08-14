@@ -37,8 +37,8 @@ DOTO는 단순한 스탬프 투어 앱을 넘어, 방문객에게는 축제와 �
 | Package Manager | <img src="https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white"> | `package-lock.json` 기준, 별도 패키지 매니저(pnpm 등) 미사용 |
 | Data Fetching | Fetch API (RN 내장) | 별도 라이브러리 없이 내장 `fetch`로 API 클라이언트(`src/apis/client.ts`) 구성 |
 | Auth | expo-auth-session, expo-crypto, expo-secure-store | 구글 로그인을 Authorization Code + PKCE(브라우저) 방식으로 처리, 원스토어 배포 시에도 Google Play Services 비의존. 발급받은 토큰은 SecureStore에 안전하게 저장 |
-| Styling | 미정 | 별도 스타일링 라이브러리 미설치, 팀 결정 필요 |
-| State management | 미정 | 아직 미설치, 팀 결정 필요 |
+| Styling | <img src="https://img.shields.io/badge/NativeWind-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white"> | Tailwind CSS 문법을 RN에 그대로 쓸 수 있어 유틸리티 클래스 기반으로 빠르고 일관된 UI 구현 가능 |
+| State management | <img src="https://img.shields.io/badge/zustand-orange?style=for-the-badge&logo=zustand&logoColor=white"> | 가볍고 보일러플레이트가 적어, 로그인 상태 같은 소규모 전역 상태 관리에 적합 |
 | Formatting | <img src="https://img.shields.io/badge/eslint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white"> | `eslint-config-expo` 기반, 코드 스타일 통일 및 잠재 오류 사전 방지 |
 
 <br>
@@ -173,13 +173,17 @@ develop ← 작업 브랜치
  ┃ ┣ 📂layouts
  ┃ ┣ 📂pages
  ┃ ┣ 📂routes
+ ┃ ┣ 📂stores
  ┃ ┣ 📂types
  ┃ ┣ 📂utils
  ┃ ┗ 📜global.css
  ┣ 📜.gitignore
  ┣ 📜app.json
+ ┣ 📜babel.config.js
+ ┣ 📜metro.config.js
  ┣ 📜package.json
  ┣ 📜README.md
+ ┣ 📜tailwind.config.js
  ┗ 📜tsconfig.json
 ```
 
@@ -195,5 +199,7 @@ develop ← 작업 브랜치
   - layouts - 화면의 공통 레이아웃 컴포넌트
   - pages - 화면 단위 컴포넌트
   - routes - 도메인 별 라우팅 관련 컴포넌트 및 로직
+  - stores - Zustand 전역 상태 스토어 모음
   - types - TypeScript 타입 정의 모음
   - utils - 전역으로 사용되는 함수
+- babel.config.js / metro.config.js / tailwind.config.js - NativeWind(Tailwind CSS) 빌드 설정
