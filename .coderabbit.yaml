@@ -1,0 +1,95 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# ---------------------------------------------------------------- #
+# CodeRabbit AI 설정
+# ---------------------------------------------------------------- #
+
+# 응답 기본 언어
+language: "ko-KR"
+
+# AI 페르소나 및 리뷰 톤
+# 최대 250자
+tone_instructions: >
+  피드백은 명확하고 구체적으로 작성하고, 문제의 원인과 개선 방법을 함께 제시하세요.
+  필요한 경우 관련 개념이나 공식 문서를 안내하세요.
+  비판보다 개선 중심의 제안을 우선하며, 칭찬은 짧고 위트 있게 작성하세요.
+
+# ---------------------------------------------------------------- #
+# 코드 리뷰 기능 세부 설정
+# ---------------------------------------------------------------- #
+
+reviews:
+  # 균형 잡힌 리뷰 스타일
+  profile: "chill"
+
+  # CodeRabbit 코멘트가 모두 resolve되어도 자동 Approve하지 않음
+  request_changes_workflow: false
+
+  # PR 변경 사항 고수준 요약
+  high_level_summary: true
+
+  # 상세 walkthrough는 접힌 상태로 표시
+  collapse_walkthrough: true
+
+  # 변경된 파일별 요약
+  changed_files_summary: true
+
+  # 코드 실행 흐름에 대한 시퀀스 다이어그램 생성
+  sequence_diagrams: true
+
+  # PR에 연결된 Issue의 요구사항을 리뷰 컨텍스트로 활용
+  assess_linked_issues: true
+
+  # 관련 Issue 추천 비활성화
+  related_issues: false
+
+  # 관련 PR 추천 활성화
+  related_prs: true
+
+  # 레이블 추천 및 자동 적용 비활성화
+  suggested_labels: false
+  auto_apply_labels: false
+
+  # 리뷰어 추천 및 자동 할당 비활성화
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+
+  # 리뷰 요약의 시(Poem) 비활성화
+  poem: false
+
+  # ---------------------------------------------------------------- #
+  # 자동 리뷰 트리거 설정
+  # ---------------------------------------------------------------- #
+
+  auto_review:
+    # PR 생성 시 자동 리뷰
+    enabled: true
+
+    # 새로운 커밋이 push되면 변경된 부분을 incremental review
+    auto_incremental_review: true
+
+    # 리뷰된 커밋 5개 이후 incremental auto-review 일시정지
+    # 필요하면 @coderabbitai review로 다시 리뷰 요청
+    auto_pause_after_reviewed_commits: 5
+
+# ---------------------------------------------------------------- #
+# 채팅 기능 설정
+# ---------------------------------------------------------------- #
+
+chat:
+  # CodeRabbit이 관련 코멘트에 자동 응답
+  auto_reply: true
+
+# ---------------------------------------------------------------- #
+# CodeRabbit Knowledge Base 설정
+# ---------------------------------------------------------------- #
+
+knowledge_base:
+
+  # 필요한 경우 최신 공식 문서 등의 웹 검색 허용
+  web_search:
+    enabled: true
+
+  # 저장소 내 코딩 가이드 문서를 리뷰 기준으로 활용
+  code_guidelines:
+    enabled: true
