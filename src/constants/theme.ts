@@ -80,6 +80,13 @@ export const FontWeight = {
   bold: '700',
 } as const;
 
+export const FontFamily = {
+  regular: 'PretendardRegular',
+  medium: 'PretendardMedium',
+  semiBold: 'PretendardSemiBold',
+  bold: 'PretendardBold',
+};
+
 export const Radius = {
   sm: 4,
   md: 10,
