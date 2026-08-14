@@ -30,16 +30,18 @@ DOTO는 단순한 스탬프 투어 앱을 넘어, 방문객에게는 축제와 �
 
 | **역할** | **종류** | **선정 이유** |
 | --- | --- | --- |
-| Library | <img src="https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB"> | Expo 기반으로 하나의 코드베이스에서 Android 앱 개발 및 원스토어 배포가 가능하고, 컴포넌트 기반 구조로 재사용성이 높음 |
-| Programming Language | <img src="https://img.shields.io/badge/typescript-3178C6?style=for-the-badge&logo=typescript&logoColor=white"/> | 정적 타입을 제공하여 코드의 안정성과 가독성을 높이고, 개발 중 오류를 사전에 방지할 수 있어 유지보수에 유리 |
+| Library | <img src="https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React Native"> | Expo 기반으로 하나의 코드베이스에서 Android 앱 개발 및 원스토어 배포가 가능하고, 컴포넌트 기반 구조로 재사용성이 높음 |
+| Programming Language | <img src="https://img.shields.io/badge/typescript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"/> | 정적 타입을 제공하여 코드의 안정성과 가독성을 높이고, 개발 중 오류를 사전에 방지할 수 있어 유지보수에 유리 |
 | Routing | expo-router | Metro 기반 파일 라우팅으로 네이티브·웹을 함께 지원, 별도 웹 전용 라우터(react-router) 불필요 |
 | Bundler | Metro (Expo 내장) | React Native 표준 번들러. Vite 등 웹 전용 번들러는 네이티브 빌드를 지원하지 않아 사용 불가 |
-| Package Manager | <img src="https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white"> | `package-lock.json` 기준, 별도 패키지 매니저(pnpm 등) 미사용 |
+| Package Manager | <img src="https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white" alt="npm"> | `package-lock.json` 기준, 별도 패키지 매니저(pnpm 등) 미사용 |
 | Data Fetching | Fetch API (RN 내장) | 별도 라이브러리 없이 내장 `fetch`로 API 클라이언트(`src/apis/client.ts`) 구성 |
 | Auth | expo-auth-session, expo-crypto, expo-secure-store | 구글 로그인을 Authorization Code + PKCE(브라우저) 방식으로 처리, 원스토어 배포 시에도 Google Play Services 비의존. 발급받은 토큰은 SecureStore에 안전하게 저장 |
-| Styling | <img src="https://img.shields.io/badge/NativeWind-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white"> | Tailwind CSS 문법을 RN에 그대로 쓸 수 있어 유틸리티 클래스 기반으로 빠르고 일관된 UI 구현 가능 |
-| State management | <img src="https://img.shields.io/badge/zustand-orange?style=for-the-badge&logo=zustand&logoColor=white"> | 가볍고 보일러플레이트가 적어, 로그인 상태 같은 소규모 전역 상태 관리에 적합 |
-| Formatting | <img src="https://img.shields.io/badge/eslint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white"> | `eslint-config-expo` 기반, 코드 스타일 통일 및 잠재 오류 사전 방지 |
+| Styling | <img src="https://img.shields.io/badge/NativeWind-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="NativeWind"> | Tailwind CSS 문법을 RN에 그대로 쓸 수 있어 유틸리티 클래스 기반으로 빠르고 일관된 UI 구현 가능 |
+| State management | <img src="https://img.shields.io/badge/zustand-orange?style=for-the-badge&logo=zustand&logoColor=white" alt="Zustand"> | 가볍고 보일러플레이트가 적어, 로그인 상태 같은 소규모 전역 상태 관리에 적합 |
+| Formatting | <img src="https://img.shields.io/badge/eslint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white" alt="ESLint"> | `eslint-config-expo` 기반, 코드 스타일 통일 및 잠재 오류 사전 방지 |
+
+> ⚠️ SecureStore는 iOS/Android 네이티브에서만 안전하게 암호화 저장됩니다. 웹 빌드(`expo start --web`)에서는 별도 검토 없이 localStorage 등에 토큰을 그대로 저장하면 안전하지 않으니, 웹을 실제로 지원하게 되면 서버 세션(Secure, HttpOnly, SameSite 쿠키) 등 별도 방식을 검토해야 합니다.
 
 <br>
 
@@ -47,7 +49,7 @@ DOTO는 단순한 스탬프 투어 앱을 넘어, 방문객에게는 축제와 �
 
 - **npm 명령어 예시**
 
-```
+```bash
 npm install # 전체 설치
 npm install 라이브러리 # 라이브러리 설치
 npm start # Expo 개발 서버 실행
