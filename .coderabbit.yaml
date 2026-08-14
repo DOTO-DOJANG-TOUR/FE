@@ -65,6 +65,11 @@ reviews:
     # PR 생성 시 자동 리뷰
     enabled: true
 
+    # 기본 브랜치(main) 외에 develop으로 향하는 PR도 자동 리뷰 대상에 포함
+    # (팀 Git Flow상 feature/chore 브랜치는 develop으로 PR이 감)
+    base_branches:
+      - "develop"
+
     # 새로운 커밋이 push되면 변경된 부분을 incremental review
     auto_incremental_review: true
 
