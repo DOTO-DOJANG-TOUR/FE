@@ -89,7 +89,7 @@ export const FontFamily = {
 
 export const Radius = {
   sm: 4,
-  md: 10,
+  md: 12,
   lg: 16,
   full: 999,
 };
