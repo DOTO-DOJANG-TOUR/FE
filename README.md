@@ -9,8 +9,8 @@
 ## 🙋🏻‍♀️ DOJANG-TOUR의 FE Developer를 소개합니다!
 
 | <a href="https://github.com/p1001q"><img src="https://avatars.githubusercontent.com/u/201849046?v=4" width="120px;" alt=""/></a> | <a href="https://github.com/BB545"><img src="https://avatars.githubusercontent.com/u/148606294?s=400&u=520b8793def7e2f6e7e9718aa0e31de8b8fbfe00&v=4" width="120px;" alt=""/></a> |
-| -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 박수연                                                                                                                           | 노현희                                                                                                                                                                           |
+| :-: | :-: |
+| 박수연 | 노현희 |
 
 <br>
 
@@ -28,37 +28,34 @@ DOTO는 단순한 스탬프 투어 앱을 넘어, 방문객에게는 축제와 �
 
 ## 💻 기술 스택
 
-| **역할**             | **종류**                                                                                                                                                                                                                                                                                                                        | **선정 이유**                                                                                                              |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Library              | <img src="https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB">                                                                                                                                                                                                                    | 컴포넌트 기반 구조로 재사용성과 유지보수성이 높고, 하나의 코드베이스로 Android 앱을 개발할 수 있어 개발 효율을 극대화 가능 |
-| Programming Language | <img src="https://img.shields.io/badge/typescript-3178C6?style=for-the-badge&logo=typescript&logoColor=white"/>                                                                                                                                                                                                                 | 정적 타입을 제공하여 코드의 안정성과 가독성을 높이고, 개발 중 오류를 사전에 방지할 수 있어 유지보수에 유리                 |
-| Styling              | <img src="https://img.shields.io/badge/tailwindcss-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white">                                                                                                                                                                                                                | 유틸리티 클래스 기반의 스타일링으로 반복되는 CSS 코드 작성을 줄이고, 빠르고 일관된 UI 구현 가능                            |
-| Data Fetching        | <img src="https://img.shields.io/badge/Axios-5A29E4?style=for-the-badge&logo=Axios&logoColor=white">                                                                                                                                                                                                                            | 직관적인 API 사용법과 자동 JSON 변환 기능으로 비동기 통신이 간편                                                           |
-| State management     | <img src="https://img.shields.io/badge/zustand-orange?style=for-the-badge&logo=zustand&logoColor=white">                                                                                                                                                                                                                        | 가볍고 직관적인 구조로 전역 상태를 쉽게 관리하며, selector 구독을 통한 최소 리렌더링으로 높은 성능 제공                    |
-| Routing              | <img src="https://img.shields.io/badge/ReactRouter-CA4245?style=for-the-badge&logo=ReactRouter&logoColor=white">                                                                                                                                                                                                                | SPA에 최적화된 라우팅 기능 제공, 선언적 방식으로 라우트를 쉽게 구성 가능                                                   |
-| Formatting           | <img src="https://img.shields.io/badge/eslint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white"> <img src="https://img.shields.io/badge/prettier-000000?style=for-the-badge&logo=prettier&logoColor=F7B93E"> <img src="https://img.shields.io/badge/stylelint-263238?style=for-the-badge&logo=stylelint&logoColor=white"> | 코드 스타일을 통일하고 잠재적인 오류를 사전에 방지하여 협업 시 효율성을 높임                                               |
-| Package Manager      | <img src="https://img.shields.io/badge/pnpm-F69220?style=for-the-badge&logo=pnpm&logoColor=white">                                                                                                                                                                                                                              | 빠른 설치 속도와 안정적인 패키지 관리 기능으로 프로젝트 환경 설정에 용이                                                   |
-| Bundler              | <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=Vite&logoColor=white">                                                                                                                                                                                                                              | 빠른 서버 시작과 모듈 번들링 성능으로 개발 생산성을 향상                                                                   |
+| **역할** | **종류** | **선정 이유** |
+| --- | --- | --- |
+| Library | <img src="https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React Native"> | Expo 기반으로 하나의 코드베이스에서 Android 앱 개발 및 원스토어 배포가 가능하고, 컴포넌트 기반 구조로 재사용성이 높음 |
+| Programming Language | <img src="https://img.shields.io/badge/typescript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"/> | 정적 타입을 제공하여 코드의 안정성과 가독성을 높이고, 개발 중 오류를 사전에 방지할 수 있어 유지보수에 유리 |
+| Routing | expo-router | Metro 기반 파일 라우팅으로 네이티브·웹을 함께 지원, 별도 웹 전용 라우터(react-router) 불필요 |
+| Bundler | Metro (Expo 내장) | React Native 표준 번들러. Vite 등 웹 전용 번들러는 네이티브 빌드를 지원하지 않아 사용 불가 |
+| Package Manager | <img src="https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white" alt="npm"> | `package-lock.json` 기준, 별도 패키지 매니저(pnpm 등) 미사용 |
+| Data Fetching | Fetch API (RN 내장) | 별도 라이브러리 없이 내장 `fetch`로 API 클라이언트(`src/apis/client.ts`) 구성 |
+| Auth | expo-auth-session, expo-crypto, expo-secure-store | 구글 로그인을 Authorization Code + PKCE(브라우저) 방식으로 처리, 원스토어 배포 시에도 Google Play Services 비의존. 발급받은 토큰은 SecureStore에 안전하게 저장 |
+| Styling | <img src="https://img.shields.io/badge/NativeWind-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="NativeWind"> | Tailwind CSS 문법을 RN에 그대로 쓸 수 있어 유틸리티 클래스 기반으로 빠르고 일관된 UI 구현 가능 |
+| State management | <img src="https://img.shields.io/badge/zustand-orange?style=for-the-badge&logo=zustand&logoColor=white" alt="Zustand"> | 가볍고 보일러플레이트가 적어, 로그인 상태 같은 소규모 전역 상태 관리에 적합 |
+| Formatting | <img src="https://img.shields.io/badge/eslint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white" alt="ESLint"> | `eslint-config-expo` 기반, 코드 스타일 통일 및 잠재 오류 사전 방지 |
+
+> ⚠️ SecureStore는 iOS/Android 네이티브에서만 안전하게 암호화 저장됩니다. 웹 빌드(`expo start --web`)에서는 별도 검토 없이 localStorage 등에 토큰을 그대로 저장하면 안전하지 않으니, 웹을 실제로 지원하게 되면 서버 세션(Secure, HttpOnly, SameSite 쿠키) 등 별도 방식을 검토해야 합니다.
 
 <br>
 
 ## 🧩 Package Manager
 
-- **pnpm 버전**
-  - 10.12.1
+- **npm 명령어 예시**
 
-- **pnpm 버전 설치 방법**
-
-```
-pnpm set version 버전 # 프로젝트 최상위 폴더 위치에서 명령어 입력
-```
-
-- **pnpm 명령어 예시**
-
-```
-pnpm install # 전체 설치
-pnpm add 라이브러리 # 라이브러리 설치
-pnpm dev # 실행
+```bash
+npm install # 전체 설치
+npm install 라이브러리 # 라이브러리 설치
+npm start # Expo 개발 서버 실행
+npm run android # 안드로이드 실행
+npm run ios # iOS 실행
+npm run lint # 린트 검사
 ```
 
 <br>
@@ -156,59 +153,55 @@ develop ← 작업 브랜치
 ## 📂 프로젝트 구조
 
 ```
-📦ZERO-Helper-FE
+📦DOTO
  ┣ 📂.github
  ┃ ┣ 📂ISSUE_TEMPLATE
  ┃ ┗ 📜pull_request_template.md
- ┣ 📂public
- ┃ ┗ 📂fonts
- ┃ ┗ 📜Logo.svg
+ ┣ 📂assets
+ ┃ ┣ 📂images
+ ┃ ┗ 📂expo.icon
+ ┣ 📂scripts
+ ┃ ┗ 📜reset-project.js
  ┣ 📂src
  ┃ ┣ 📂apis
+ ┃ ┣ 📂app
+ ┃ ┃ ┣ 📜_layout.tsx
+ ┃ ┃ ┗ 📜index.tsx
  ┃ ┣ 📂assets
  ┃ ┣ 📂components
+ ┃ ┃ ┗ 📂common
  ┃ ┣ 📂constants
  ┃ ┣ 📂hooks
  ┃ ┣ 📂layouts
  ┃ ┣ 📂pages
- ┃ ┃ ┣ 📂LoginPage
- ┃ ┃ ┣ 📂HomePage
- ┃ ┃ ┣ 📂GoalPage
- ┃ ┃ ┣ 📂FolderPage
- ┃ ┃ ┣ 📂TaskPage
- ┃ ┃ ┣ 📂TimeBlockPage
- ┃ ┃ ┣ 📂MyLogPage
- ┃ ┃ ┗ 📜index.ts
  ┃ ┣ 📂routes
+ ┃ ┣ 📂stores
  ┃ ┣ 📂types
  ┃ ┣ 📂utils
- ┃ ┣ 📜App.tsx
- ┃ ┗ 📜main.jsx
- ┣ 📜.env
+ ┃ ┗ 📜global.css
  ┣ 📜.gitignore
- ┣ 📜.prettierrc
- ┣ 📜.stylelintrc
- ┣ 📜eslint.config.js
- ┣ 📜index.html
+ ┣ 📜app.json
+ ┣ 📜babel.config.js
+ ┣ 📜metro.config.js
  ┣ 📜package.json
- ┣ 📜pnpm-lock.yaml
  ┣ 📜README.md
- ┣ 📜tsconfig.app.json
- ┣ 📜tsconfig.json
- ┣ 📜tsconfig.node.json
- ┗ 📜vite.config.ts
+ ┣ 📜tailwind.config.js
+ ┗ 📜tsconfig.json
 ```
 
-- public
-  - fonts - 폰트
+- assets - 이미지, 아이콘 등 정적 리소스
+- scripts - 프로젝트 유틸 스크립트 (reset-project 등)
 - src
   - apis - 서버와 통신하는 API 함수 모음
-  - assets - 사용되는 모든 에셋
-  - components - 공용 컴포넌트 및 스타일
+  - app - expo-router 기반 파일 라우팅 진입점 (화면 및 레이아웃)
+  - assets - 앱 내에서 사용되는 에셋
+  - components - 공용 컴포넌트 (common 등)
   - constants - 프로젝트 전역에서 사용되는 상수값 및 설정 모음
   - hooks - 전역으로 사용되는 훅
-  - layouts - 페이지의 공통 레이아웃 컴포넌트
-  - pages - 실제 라우팅되는 페이지 컴포넌트
-  - routes - 도메인 별 라우팅 페이지와 컴포넌트 및 스타일 등
+  - layouts - 화면의 공통 레이아웃 컴포넌트
+  - pages - 화면 단위 컴포넌트
+  - routes - 도메인 별 라우팅 관련 컴포넌트 및 로직
+  - stores - Zustand 전역 상태 스토어 모음
   - types - TypeScript 타입 정의 모음
   - utils - 전역으로 사용되는 함수
+- babel.config.js / metro.config.js / tailwind.config.js - NativeWind(Tailwind CSS) 빌드 설정
