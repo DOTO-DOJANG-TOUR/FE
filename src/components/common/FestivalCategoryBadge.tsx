@@ -1,4 +1,4 @@
-import { FontFamily, FontSize, Radius } from '@/constants/theme';
+import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { StyleSheet, Text, View } from 'react-native';
 
 type FestivalCategoryCode =
@@ -13,6 +13,7 @@ type Props = {
   category: FestivalCategoryCode;
 };
 
+// 6개 코드 밖의 값(오타, 신규 카테고리 등)에 대한 폴백 없음 — API 연동 시점에 실제 응답 형태 보고 다시 결정하기로 함(2026-08-18)
 const categoryLabel: Record<FestivalCategoryCode, string> = {
   EV010100: '문화관광',
   EV010200: '문화예술',
@@ -38,13 +39,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: Radius.sm,
-    backgroundColor: '#F6F6F6',
+    backgroundColor: Colors.gray.gray20,
   },
   text: {
     fontSize: FontSize.xs,
     lineHeight: FontSize.xs * 1.5,
     fontFamily: FontFamily.medium,
-    color: '#A8A8A8',
+    color: Colors.gray.gray70,
     textAlign: 'center',
   },
 });

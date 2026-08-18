@@ -26,6 +26,24 @@ export const Colors = {
     backgroundSelected: '#2E3135',
     textSecondary: '#B0B4BA',
   },
+  // Figma 로컬 색상 스타일(gray/pink/blue) 이름 그대로(공백만 제거) — 확인된 것만 우선 추가, 필요할 때마다 늘려갈 것
+  gray: {
+    gray00: '#FFFFFF',
+    gray20: '#F6F6F6',
+    gray60: '#BCBCBC',
+    gray70: '#A8A8A8',
+    gray100: '#262626',
+  },
+  pink: {
+    pink10: '#FFF2F2',
+    pink30: '#FF8076',
+    pink40: '#FF675F',
+    pink50: '#FA5144',
+  },
+  blue: {
+    blue10: '#F2F9FF',
+    blue20: '#4598FE',
+  },
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;

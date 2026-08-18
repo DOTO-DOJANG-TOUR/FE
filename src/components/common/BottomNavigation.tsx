@@ -1,5 +1,5 @@
 import { FestivalNaviIcon, MyNaviIcon, StampNaviIcon, TourNaviIcon } from '@/components/icons';
-import { FontFamily, FontSize } from '@/constants/theme';
+import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { router, type Href } from 'expo-router';
 import type { ComponentType } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -10,8 +10,8 @@ type Props = {
   activeTab: NavTab;
 };
 
-const ACTIVE_COLOR = '#FA5144';
-const INACTIVE_COLOR = '#A8A8A8';
+const ACTIVE_COLOR = Colors.pink.pink50;
+const INACTIVE_COLOR = Colors.gray.gray70;
 
 type TabConfig = {
   label: string;
@@ -19,6 +19,7 @@ type TabConfig = {
   Icon: ComponentType<{ color?: string }>;
 };
 
+// href는 #16에서 만든 스텁 페이지(내용 없음) — activeTab은 화면에서 직접 지정해야 함(현재 경로로 자동 판단 안 함)
 const tabConfig: Record<NavTab, TabConfig> = {
   festival: { label: '축제', href: '/', Icon: FestivalNaviIcon },
   tour: { label: '투어', href: '/tour', Icon: TourNaviIcon },
@@ -55,7 +56,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 45.5,
     paddingTop: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.gray.gray00,
     boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
   },
   tab: {

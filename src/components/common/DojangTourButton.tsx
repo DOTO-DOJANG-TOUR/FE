@@ -1,5 +1,8 @@
-import { FontFamily, FontSize } from '@/constants/theme';
+import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { Pressable, StyleSheet, Text } from 'react-native';
+
+// Figma의 흰 배경+그림자 바깥 래퍼(bottomsheet, padding top14/bottom40/좌우20)는
+// 페이지 레이아웃 몫이라 여기 포함 안 함 — 실제 화면에서 이 버튼을 감쌀 때 추가할 것
 
 type DojangTourButtonStatus =
   | 'start'
@@ -47,10 +50,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   activeButton: {
-    backgroundColor: '#FF675F',
+    backgroundColor: Colors.pink.pink40,
   },
   disabledButton: {
-    backgroundColor: '#F6F6F6',
+    backgroundColor: Colors.gray.gray20,
   },
   text: {
     fontSize: FontSize.md,
@@ -59,9 +62,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   activeText: {
-    color: '#FFFFFF',
+    color: Colors.gray.gray00,
   },
   disabledText: {
-    color: '#BCBCBC',
+    color: Colors.gray.gray60,
   },
 });
