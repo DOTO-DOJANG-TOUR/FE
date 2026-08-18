@@ -1,5 +1,6 @@
 import { FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { Image, StyleSheet, Text, View } from 'react-native';
+import { FestivalCategoryBadge } from './FestivalCategoryBadge';
 import { FestivalStatusBadge } from './FestivalStatusBadge';
 
 type CardType = 'festival' | 'tour';
@@ -42,28 +43,10 @@ export const MainItemBlock = ({ type, status }: Props) => {
             <Text style={styles.text}>179m · 여수시 중앙로 74</Text>
           )}
         </View>
-
-        {/* FestivalCategoryBadge 구현 시 삭제 예정 View */}
-        <View
-          style={{
-            alignSelf: 'flex-start',
-            paddingHorizontal: 8,
-            paddingVertical: 2,
-            borderRadius: 4,
-            backgroundColor: '#F6F6F6',
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 12,
-              color: '#A8A8A8',
-            }}
-          >
-            문화관광
-          </Text>
-        </View>
         
-        {/* <FestivalCategoryBadge /> */}
+
+        {/* 카테고리 code는 api연동 후 수정 */}
+        <FestivalCategoryBadge category='EV010200' />
       </View>
     </View>
   )
