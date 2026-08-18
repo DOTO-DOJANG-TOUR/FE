@@ -2,3 +2,8 @@ export * from './FestivalNaviIcon';
 export * from './MyNaviIcon';
 export * from './StampNaviIcon';
 export * from './TourNaviIcon';
+export * from './CultureIcon';
+export * from './ExperienceIcon';
+export * from './HistoryIcon';
+export * from './MenuIcon';
+export * from './NatureIcon';
