@@ -1,9 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-export default function FestivalHomeScreen() {
+export default function StampScreen() {
   return (
     <View style={styles.container}>
-      <Text>축제 홈</Text>
+      <Text>도장</Text>
     </View>
   );
 }

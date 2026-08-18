@@ -1,9 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-export default function FestivalHomeScreen() {
+export default function TourSearchScreen() {
   return (
     <View style={styles.container}>
-      <Text>축제 홈</Text>
+      <Text>관광지 검색</Text>
     </View>
   );
 }
