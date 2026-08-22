@@ -3,14 +3,14 @@ import { StyleSheet, Text, View } from 'react-native';
 
 type Props = {
     subtitle?: string,
-    title: string,
+    title?: string,
 }
 
 export default function FestivalMainTitle({ subtitle, title }: Props) {
     return (
         <View style={styles.container}>
             {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
-            <Text style={styles.title}>{title}</Text>
+            {title && <Text style={styles.title}>{title}</Text>}
         </View>
     )
 }
