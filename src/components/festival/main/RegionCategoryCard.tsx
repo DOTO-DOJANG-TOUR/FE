@@ -1,6 +1,7 @@
 import DefaultCardImage from '@/assets/images/festival/common/card-dim-2.png';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
-import { Image, ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
     image?: ImageSourcePropType,
@@ -17,7 +18,7 @@ export default function RegionCategoryCard({
             <Image
                 source={image ?? DefaultCardImage}
                 style={styles.image}
-                resizeMode="cover"
+                contentFit="cover"
             />
             <Text style={styles.region}>{region}</Text>
         </View>
