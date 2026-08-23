@@ -253,7 +253,7 @@ export const FestivalMainPage = () => {
                             <EmptyIcon />
 
                             <Text style={styles.emptyText}>
-                                투어 가능한 축제가 없어요
+                                투어 가능한 축제가 없어요.
                             </Text>
                         </View>
                     )}
@@ -313,7 +313,7 @@ export const FestivalMainPage = () => {
                             <EmptyIcon />
 
                             <Text style={styles.emptyText}>
-                                개최 예정인 축제가 없어요
+                                개최 예정인 축제가 없어요.
                             </Text>
                         </View>
                     )}
