@@ -18,6 +18,7 @@ export default function FestivalMainTitle({ subtitle, title }: Props) {
 const styles = StyleSheet.create({
     container: {
         paddingTop: 30,
+        paddingHorizontal: 20,
     },
     subtitle: {
         fontFamily: FontFamily.bold,
