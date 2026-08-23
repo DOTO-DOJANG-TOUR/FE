@@ -1,27 +1,32 @@
 import DefaultCardImage from '@/assets/images/festival/common/card-dim-2.png';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import { Image } from 'expo-image';
-import { ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
+import { ImageSourcePropType, Pressable, StyleSheet, Text } from 'react-native';
 
 type Props = {
-    image?: ImageSourcePropType,
-    region: string,
+    image?: ImageSourcePropType;
+    region: string;
+    onPress: () => void;
 }
 
 export default function RegionCategoryCard({
     image,
-    region
+    region,
+    onPress,
 }: Props) {
 
     return (
-        <View style={styles.container}>
+        <Pressable
+            style={styles.container}
+            onPress={onPress}
+        >
             <Image
                 source={image ?? DefaultCardImage}
                 style={styles.image}
                 contentFit="cover"
             />
             <Text style={styles.region}>{region}</Text>
-        </View>
+        </Pressable>
     )
 }
 

@@ -16,6 +16,7 @@ import UpcomingFestivalCard from '@/components/festival/main/UpcomingFestivalCar
 import { EmptyIcon } from '@/components/icons/EmptyIcon';
 import { Colors, FontFamily, FontSize, Spacing } from "@/constants/theme";
 import { Asset } from 'expo-asset';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -153,6 +154,7 @@ const upcomingFestivals: UpcomingFestival[] = [
 export const FestivalMainPage = () => {
     const insets = useSafeAreaInsets();
     const [isLoading, setIsLoading] = useState(true);
+    const router = useRouter();
 
     const hasTodayFestivals = todayFestivals.length > 0;
     const hasUpcomingFestivals = upcomingFestivals.length > 0;
@@ -268,6 +270,15 @@ export const FestivalMainPage = () => {
                                     key={item.id}
                                     image={item.image}
                                     region={item.region}
+                                    onPress={() =>
+                                        router.push({
+                                            pathname: '/festival/region',
+                                            params: {
+                                                subtitle: '지역별 축제',
+                                                title: item.region,
+                                            },
+                                        })
+                                    }
                                 />
                             ))}
                         </View>
