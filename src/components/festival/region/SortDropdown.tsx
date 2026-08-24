@@ -92,21 +92,20 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: '100%',
         left: 20,
-        minWidth: 100,
+        minWidth: 136,
         marginTop: 4,
         borderRadius: 6,
-        backgroundColor: Colors.gray.gray20,
+        backgroundColor: Colors.gray.gray00,
         zIndex: 10,
         elevation: 4,
-        paddingHorizontal: 10,
-
+        paddingHorizontal: 5,
     },
     option: {
-        paddingVertical: 4,
-
+        paddingVertical: 14,
+        paddingHorizontal: 15,
     },
     optionBorder: {
         borderBottomWidth: 1,
-        borderBottomColor: Colors.gray.gray60
+        borderBottomColor: Colors.gray.gray20
     },
 });
