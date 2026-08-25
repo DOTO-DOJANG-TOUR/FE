@@ -11,6 +11,10 @@ type FestivalCategoryCode =
 
 type Props = {
   category: FestivalCategoryCode;
+  paddingHorizontal?: number;
+  paddingVertical?: number;
+  fontSize?: number;
+  fontFamily?: string;
 };
 
 // 6개 코드 밖의 값(오타, 신규 카테고리 등)에 대한 폴백 없음 — API 연동 시점에 실제 응답 형태 보고 다시 결정하기로 함(2026-08-18)
@@ -23,10 +27,25 @@ const categoryLabel: Record<FestivalCategoryCode, string> = {
   EV010600: '기타',
 };
 
-export const FestivalCategoryBadge = ({ category }: Props) => {
+export const FestivalCategoryBadge = ({
+  category,
+  paddingHorizontal = 8,
+  paddingVertical = 2,
+  fontSize = FontSize.xs,
+  fontFamily = FontFamily.medium,
+}: Props) => {
   return (
-    <View style={styles.badge}>
-      <Text style={styles.text}>{categoryLabel[category]}</Text>
+    <View style={[
+      styles.badge, {
+        paddingHorizontal,
+        paddingVertical,
+      }]}>
+      <Text style={[
+        styles.text,
+        {
+          fontSize,
+          fontFamily,
+        }]}>{categoryLabel[category]}</Text>
     </View>
   );
 };
@@ -36,15 +55,10 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
     borderRadius: Radius.sm,
     backgroundColor: Colors.gray.gray20,
   },
   text: {
-    fontSize: FontSize.xs,
-    lineHeight: FontSize.xs * 1.5,
-    fontFamily: FontFamily.medium,
     color: Colors.gray.gray70,
     textAlign: 'center',
   },
