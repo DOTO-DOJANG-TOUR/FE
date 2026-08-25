@@ -6,6 +6,14 @@ type FestivalCategoryCode =
   | 'EV010500'
   | 'EV010600';
 
+type DojangTourButtonStatus =
+  | 'start'
+  | 'stop'
+  | 'visitAndStamp'
+  | 'alreadyVisited'
+  | 'alreadyJoinedTour'
+  | 'inOtherTour';
+
 export type FestivalStatus = 'upcoming' | 'ongoing' | 'ended';
 
 export type FestivalContent = {
@@ -17,4 +25,24 @@ export type FestivalContent = {
   endDate: string;
   region: string;
   category: FestivalCategoryCode;
+};
+
+export type FestivalDetail = {
+  id: number;
+  status: FestivalStatus;
+  imageUrl?: string;
+  title: string;
+  phone?: string;
+  homeLink?: string;
+  region?: string;
+  category: FestivalCategoryCode;
+  introduction?: string;
+  eventContent?: string;
+  usageInfo?: {
+    operatingHours?: string;
+    closedDays?: string;
+    fee?: string;
+    parking?: string;
+  };
+  dojangStatus: DojangTourButtonStatus;
 };
