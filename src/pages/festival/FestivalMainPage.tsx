@@ -242,6 +242,12 @@ export const FestivalMainPage = () => {
                                     startDate={item.startDate}
                                     endDate={item.endDate}
                                     region={item.region}
+                                    onPress={() =>
+                                        router.push({
+                                            pathname: '/festival-detail/[id]',
+                                            params: { id: String(item.id) },
+                                        })
+                                    }
                                 />
                             )}
                             ItemSeparatorComponent={() => (
@@ -302,6 +308,12 @@ export const FestivalMainPage = () => {
                                     title={item.title}
                                     startDate={item.startDate}
                                     region={item.region}
+                                    onPress={() =>
+                                        router.push({
+                                            pathname: '/festival-detail/[id]',
+                                            params: { id: String(item.id) },
+                                        })
+                                    }
                                 />
                             )}
                             ItemSeparatorComponent={() => (

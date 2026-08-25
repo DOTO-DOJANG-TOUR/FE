@@ -2,7 +2,7 @@ import DefaultImage from '@/assets/images/festival/common/card-dim-2.png';
 import { FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { FestivalContent } from '@/types/festival';
 import { TourContent } from '@/types/tour';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { FestivalCategoryBadge } from './FestivalCategoryBadge';
 import { FestivalStatusBadge } from './FestivalStatusBadge';
 
@@ -10,10 +10,12 @@ type Props =
   | {
     type: 'festival';
     festival: FestivalContent;
+    onPress?: () => void;
   }
   | {
     type: 'tour';
     tour: TourContent;
+    onPress?: () => void;
   };
 
 export const MainItemBlock = (props: Props) => {
@@ -29,7 +31,10 @@ export const MainItemBlock = (props: Props) => {
   } = content;
 
   return (
-    <View style={styles.card}>
+    <Pressable
+      style={styles.card}
+      onPress={props.onPress}
+    >
       <View style={styles.imageContainer}>
         <Image
           source={
@@ -68,7 +73,7 @@ export const MainItemBlock = (props: Props) => {
         {/* 카테고리 code는 api연동 후 수정 */}
         <FestivalCategoryBadge category={category} />
       </View>
-    </View>
+    </Pressable>
   )
 }
 
