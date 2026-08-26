@@ -256,6 +256,9 @@ export default function FestivalDetailPage({
             <View style={[
                 styles.dojangSection,
                 styles.white,
+                {
+                    paddingBottom: Math.max(40, insets.bottom + 14),
+                },
             ]}>
                 <DojangTourButton
                     status={festival.dojangStatus}
@@ -382,6 +385,5 @@ const styles = StyleSheet.create({
     dojangSection: {
         paddingHorizontal: 20,
         paddingTop: 14,
-        paddingBottom: 40,
     },
 });
