@@ -1,12 +1,22 @@
 import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { BackIcon } from '../icons/BackIcon';
 import { CircleDeleteIcon } from '../icons/CircleDeleteIcon';
 
-export default function SearchHeader() {
-    const [keyword, setKeyword] = useState('');
+type Props = {
+    type: 'festival' | 'tour';
+    keyword: string;
+    onChangeKeyword: (keyword: string) => void;
+    onSearch: () => void;
+};
+
+export default function SearchHeader({
+    type,
+    keyword,
+    onChangeKeyword,
+    onSearch,
+}: Props) {
     const router = useRouter();
 
     return (
@@ -21,17 +31,22 @@ export default function SearchHeader() {
                 <TextInput
                     style={styles.input}
                     value={keyword}
-                    onChangeText={setKeyword}
-                    placeholder='방문하고 싶은 축제 검색'
+                    onChangeText={onChangeKeyword}
+                    placeholder={
+                        type === 'festival'
+                            ? '방문하고 싶은 축제 검색'
+                            : '방문하고 싶은 관광지 검색'
+                    }
                     placeholderTextColor="#A8A8A8"
                     returnKeyType='search'
                     underlineColorAndroid="transparent"
+                    onSubmitEditing={onSearch}
                 />
 
                 {keyword.length > 0 && (
                     <Pressable
                         style={styles.clearButton}
-                        onPress={() => setKeyword('')}
+                        onPress={() => onChangeKeyword('')}
                     >
                         <CircleDeleteIcon />
                     </Pressable>
@@ -60,7 +75,8 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     input: {
-        paddingHorizontal: 20,
+        paddingLeft: 20,
+        paddingRight: 45,
         paddingVertical: 10,
         backgroundColor: Colors.gray.gray20,
         borderRadius: 20,
