@@ -44,8 +44,8 @@ export default function SearchPage({ type }: Props) {
     removeRecentSearch(type, keyword);
   };
 
-  const handleSearch = async () => {
-    const trimmedKeyword = keyword.trim();
+  const handleSearch = async (searchKeyword: string = keyword) => {
+    const trimmedKeyword = searchKeyword.trim();
 
     if (!trimmedKeyword) return;
 
@@ -61,6 +61,11 @@ export default function SearchPage({ type }: Props) {
     // 관광지 검색 API 호출 예정
   };
 
+  const handleRecentSearch = (item: string) => {
+    setKeyword(item);
+    handleSearch(item);
+  };
+
   return (
     <View style={[
       styles.container, {
@@ -72,7 +77,7 @@ export default function SearchPage({ type }: Props) {
         type={type}
         keyword={keyword}
         onChangeKeyword={setKeyword}
-        onSearch={handleSearch}
+        onSearch={() => handleSearch()}
       />
       {hasSearched ? (
         type === 'festival' ? (
@@ -149,13 +154,18 @@ export default function SearchPage({ type }: Props) {
             contentContainerStyle={styles.recentSearchList}
             renderItem={({ item }) => (
               <View style={styles.recentSearchItem}>
-                <Text
-                  style={styles.recentSearchText}
-                  numberOfLines={1}
-                  ellipsizeMode='tail'
+                <Pressable
+                  style={styles.recentSearchButton}
+                  onPress={() => handleRecentSearch(item)}
                 >
-                  {item}
-                </Text>
+                  <Text
+                    style={styles.recentSearchText}
+                    numberOfLines={1}
+                    ellipsizeMode='tail'
+                  >
+                    {item}
+                  </Text>
+                </Pressable>
 
                 <Pressable
                   onPress={() => handleDeleteRecentSearch(item)}
@@ -205,6 +215,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 20,
+  },
+  recentSearchButton: {
+    flex: 1,
   },
   recentSearchText: {
     flex: 1,
