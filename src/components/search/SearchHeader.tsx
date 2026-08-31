@@ -40,6 +40,7 @@ export default function SearchHeader({
                     placeholderTextColor="#A8A8A8"
                     returnKeyType='search'
                     underlineColorAndroid="transparent"
+                    maxLength={100}
                     onSubmitEditing={onSearch}
                 />
 
