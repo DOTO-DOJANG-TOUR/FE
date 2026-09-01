@@ -36,6 +36,7 @@ export const Colors = {
   },
   pink: {
     pink10: '#FFF2F2',
+    pink25: '#FFBDBD',
     pink30: '#FF8076',
     pink40: '#FF675F',
     pink50: '#FA5144',
