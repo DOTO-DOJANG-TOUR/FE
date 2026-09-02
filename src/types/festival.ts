@@ -46,3 +46,17 @@ export type FestivalDetail = {
   };
   dojangStatus: DojangTourButtonStatus;
 };
+
+export type Festival = {
+  festivalId: string;
+  title: string;
+  imageUrl?: string;
+  eventStartDate: string;
+  eventEndDate: string;
+  gunguName: string;
+};
+
+export type FestivalListResult = {
+  festivals: Festival[];
+  nextCursor?: string | null;
+};
