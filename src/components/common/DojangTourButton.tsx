@@ -10,7 +10,8 @@ type DojangTourButtonStatus =
   | 'visitAndStamp'
   | 'alreadyVisited'
   | 'alreadyJoinedTour'
-  | 'inOtherTour';
+  | 'inOtherTour'
+  | 'alreadyEnded';
 
 type Props = {
   status: DojangTourButtonStatus;
@@ -24,6 +25,7 @@ const statusConfig: Record<DojangTourButtonStatus, { label: string; active: bool
   alreadyVisited: { label: '이미 방문한 관광지예요', active: false },
   alreadyJoinedTour: { label: '이미 참여한 투어예요', active: false },
   inOtherTour: { label: '다른 투어에 참여 중이에요', active: false },
+  alreadyEnded: { label: '이미 종료된 투어예요', active: false },
 };
 
 export const DojangTourButton = ({ status, onPress }: Props) => {
