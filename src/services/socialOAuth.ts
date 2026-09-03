@@ -1,3 +1,9 @@
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  isSuccessResponse,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
@@ -5,13 +11,6 @@ import { Platform } from 'react-native';
 import type { SocialProvider } from '@/types/auth';
 
 WebBrowser.maybeCompleteAuthSession();
-
-const googleDiscovery: AuthSession.DiscoveryDocument = {
-  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-  tokenEndpoint: 'https://oauth2.googleapis.com/token',
-  revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
-  userInfoEndpoint: 'https://openidconnect.googleapis.com/v1/userinfo',
-};
 
 const kakaoDiscovery: AuthSession.DiscoveryDocument = {
   authorizationEndpoint: 'https://kauth.kakao.com/oauth/authorize',
@@ -26,65 +25,61 @@ export class SocialAuthError extends Error {
   }
 }
 
-function getGoogleClientId() {
-  const clientId = Platform.select({
-    android: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-    ios: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    default: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-  });
-
+function getGoogleWebClientId() {
+  const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
   if (!clientId) {
-    const platform = Platform.OS === 'android' ? 'Android' : Platform.OS === 'ios' ? 'iOS' : 'Web';
-    throw new SocialAuthError(`Google ${platform} OAuth Client ID 설정이 필요합니다.`);
+    throw new SocialAuthError('Google Web OAuth Client ID 설정이 필요합니다.');
   }
 
   return clientId;
 }
 
-function getGoogleRedirectUri(clientId: string) {
-  if (Platform.OS === 'android') return 'com.dotofe:/oauthredirect';
+function getGoogleErrorMessage(error: unknown) {
+  if (!isErrorWithCode(error)) return 'Google 로그인에 실패했습니다.';
 
-  if (Platform.OS === 'ios') {
-    const identifier = clientId.replace('.apps.googleusercontent.com', '');
-    return `com.googleusercontent.apps.${identifier}:/oauthredirect`;
+  if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+    return 'Google 로그인이 취소되었습니다.';
+  }
+  if (error.code === statusCodes.IN_PROGRESS) {
+    return 'Google 로그인이 이미 진행 중입니다.';
+  }
+  if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+    return 'Google Play 서비스를 사용할 수 없거나 업데이트가 필요합니다.';
+  }
+  if (error.code === '10' || error.code === 'DEVELOPER_ERROR') {
+    return 'Google 로그인 설정을 확인해 주세요. 패키지명, SHA-1 또는 Web Client ID가 일치하지 않습니다.';
   }
 
-  return AuthSession.makeRedirectUri({ path: 'oauth/google' });
+  return `Google 로그인에 실패했습니다. (${error.code})`;
 }
 
 async function requestGoogleIdToken() {
-  const clientId = getGoogleClientId();
-  const redirectUri = getGoogleRedirectUri(clientId);
-  const request = new AuthSession.AuthRequest({
-    clientId,
-    redirectUri,
-    responseType: AuthSession.ResponseType.Code,
-    scopes: ['openid', 'profile', 'email'],
-    usePKCE: true,
-    prompt: AuthSession.Prompt.SelectAccount,
-  });
-
-  await request.makeAuthUrlAsync(googleDiscovery);
-  const result = await request.promptAsync(googleDiscovery);
-  if (result.type !== 'success') {
-    if (result.type === 'cancel' || result.type === 'dismiss') {
-      throw new SocialAuthError('Google 로그인이 취소되었습니다.');
-    }
-    throw new SocialAuthError('Google 로그인에 실패했습니다.');
+  if (Platform.OS !== 'android') {
+    throw new SocialAuthError('Google 로그인은 현재 Android 앱에서만 지원합니다.');
   }
 
-  const token = await AuthSession.exchangeCodeAsync(
-    {
-      clientId,
-      code: result.params.code,
-      redirectUri,
-      extraParams: { code_verifier: request.codeVerifier ?? '' },
-    },
-    googleDiscovery,
-  );
+  try {
+    GoogleSignin.configure({
+      webClientId: getGoogleWebClientId(),
+      scopes: ['email', 'profile'],
+      offlineAccess: false,
+    });
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-  if (!token.idToken) throw new SocialAuthError('Google ID Token을 받지 못했습니다.');
-  return token.idToken;
+    const response = await GoogleSignin.signIn();
+    if (!isSuccessResponse(response)) {
+      throw new SocialAuthError('Google 로그인이 취소되었습니다.');
+    }
+
+    if (!response.data.idToken) {
+      throw new SocialAuthError('Google ID Token을 받지 못했습니다.');
+    }
+
+    return response.data.idToken;
+  } catch (error) {
+    if (error instanceof SocialAuthError) throw error;
+    throw new SocialAuthError(getGoogleErrorMessage(error));
+  }
 }
 
 async function requestKakaoIdToken() {

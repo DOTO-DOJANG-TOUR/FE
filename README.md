@@ -36,7 +36,7 @@ DOTO는 단순한 스탬프 투어 앱을 넘어, 방문객에게는 축제와 �
 | Bundler | Metro (Expo 내장) | React Native 표준 번들러. Vite 등 웹 전용 번들러는 네이티브 빌드를 지원하지 않아 사용 불가 |
 | Package Manager | <img src="https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white" alt="npm"> | `package-lock.json` 기준, 별도 패키지 매니저(pnpm 등) 미사용 |
 | Data Fetching | Fetch API (RN 내장) | 별도 라이브러리 없이 내장 `fetch`로 API 클라이언트(`src/apis/client.ts`) 구성 |
-| Auth | expo-auth-session, expo-crypto, expo-secure-store | 구글 로그인을 Authorization Code + PKCE(브라우저) 방식으로 처리, 원스토어 배포 시에도 Google Play Services 비의존. 발급받은 토큰은 SecureStore에 안전하게 저장 |
+| Auth | @react-native-google-signin/google-signin, expo-auth-session, expo-secure-store | Android 구글 로그인은 네이티브 SDK로 ID Token을 발급받아 백엔드에 전달하고, DOTO 토큰은 SecureStore에 안전하게 저장. 카카오 로그인은 연동 작업 진행 중 |
 | Styling | <img src="https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React Native StyleSheet"> | RN 내장 `StyleSheet` 사용, 별도 라이브러리 없이 표준 방식으로 통일 |
 | State management | <img src="https://img.shields.io/badge/zustand-orange?style=for-the-badge&logo=zustand&logoColor=white" alt="Zustand"> | 가볍고 보일러플레이트가 적어, 로그인 상태 같은 소규모 전역 상태 관리에 적합 |
 | Formatting | <img src="https://img.shields.io/badge/eslint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white" alt="ESLint"> | `eslint-config-expo` 기반, 코드 스타일 통일 및 잠재 오류 사전 방지 |
