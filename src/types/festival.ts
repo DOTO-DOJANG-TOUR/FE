@@ -14,16 +14,16 @@ type DojangTourButtonStatus =
   | 'alreadyJoinedTour'
   | 'inOtherTour';
 
-export type FestivalStatus = 'upcoming' | 'ongoing' | 'ended';
+export type FestivalStatus = 'UPCOMING' | 'ONGOING' | 'ENDED';
 
 export type FestivalContent = {
-  id: number;
+  festivalId: number;
   status: FestivalStatus;
   imageUrl?: string;
   title: string;
-  startDate: string;
-  endDate: string;
-  region: string;
+  eventStartDate: string;
+  eventEndDate: string;
+  gunguName: string;
   category: FestivalCategoryCode;
 };
 
@@ -56,7 +56,7 @@ export type Festival = {
   gunguName: string;
 };
 
-export type FestivalListResult = {
-  festivals: Festival[];
+export type FestivalListResult<T> = {
+  festivals: T[];
   nextCursor?: string | null;
 };

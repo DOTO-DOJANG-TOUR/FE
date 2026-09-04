@@ -1,3 +1,4 @@
+import { getRegionalFestivals } from '@/apis/festival';
 import { MainItemBlock } from '@/components/common/MainItemBlock';
 import RegionalHeader from '@/components/festival/region/RegionalHeader';
 import SortDropdown from '@/components/festival/region/SortDropdown';
@@ -5,77 +6,110 @@ import { EmptyIcon } from '@/components/icons/EmptyIcon';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { FestivalContent } from '@/types/festival';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = {
   subtitle: string;
   title: string;
+  regionGroup: string;
 }
-
-// 임시 데이터 - API 연동시 삭제 예정
-const regionalFestivals: FestivalContent[] = [
-  {
-    id: 1,
-    status: 'ongoing',
-    imageUrl: 'https://picsum.photos/seed/festival1/400/600',
-    title: '김악산 꽃별 여행 김악산 김악산 꽃별 여행 김악산',
-    startDate: '2026.9.18',
-    endDate: '2026.10.11',
-    region: '거창군',
-    category: 'EV010100',
-  },
-  {
-    id: 2,
-    status: 'ongoing',
-    imageUrl: 'https://picsum.photos/seed/festival2/400/600',
-    title: '영광불갑산상사화축제',
-    startDate: '2026.9.18',
-    endDate: '2026.09.27',
-    region: '영광군',
-    category: 'EV010100',
-  },
-  {
-    id: 3,
-    status: 'ended',
-    imageUrl: undefined,
-    title: '김악산 꽃별 여행 김악산 김악산 꽃별 여행 김악산',
-    startDate: '2026.9.18',
-    endDate: '2026.10.11',
-    region: '거창군',
-    category: 'EV010100',
-  },
-  {
-    id: 4,
-    status: 'upcoming',
-    imageUrl: undefined,
-    title: '영광불갑산상사화축제',
-    startDate: '2026.9.18',
-    endDate: '2026.09.27',
-    region: '영광군',
-    category: 'EV010100',
-  },
-];
 
 export const RegionalFestivalPage = ({
   subtitle,
   title,
+  regionGroup,
 }: Props) => {
   const insets = useSafeAreaInsets();
-  const [sort, setSort] = useState('ENDING_SOON');
+  const [sort, setSort] = useState('END_DATE');
   const router = useRouter();
+
+  const [regionalFestivals, setRegionalFestivals] =
+    useState<FestivalContent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [nextCursor, setNextCursor] =
+    useState<string | null>(null);
+  const [isFetchingMore, setIsFetchingMore] =
+    useState(false);
 
   const sortOptions = [
     {
       label: '종료 임박순',
-      value: 'ENDING_SOON',
+      value: 'END_DATE',
     },
     {
       label: '개최 임박순',
-      value: 'STARTING_SOON',
+      value: 'START_DATE',
     },
   ];
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchRegionalFestivals = async () => {
+      try {
+        setIsLoading(true);
+
+        setRegionalFestivals([]);
+        setNextCursor(null);
+
+        const result = await getRegionalFestivals(
+          regionGroup,
+          sort,
+        );
+
+        if (!isMounted) {
+          return;
+        }
+
+        setRegionalFestivals(result.festivals);
+        setNextCursor(result.nextCursor ?? null);
+      } catch (error) {
+        console.error('지역별 축제 조회 실패:', error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchRegionalFestivals();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [regionGroup, sort]);
+
+  const fetchMoreFestivals = async () => {
+    if (!nextCursor || isFetchingMore) {
+      return;
+    }
+
+    try {
+      setIsFetchingMore(true);
+
+      const result = await getRegionalFestivals(
+        regionGroup,
+        sort,
+        nextCursor
+      );
+
+      setRegionalFestivals((prev) => [
+        ...prev,
+        ...result.festivals,
+      ]);
+
+      setNextCursor(result.nextCursor ?? null);
+    } catch (error) {
+      console.error(
+        '지역별 축제 추가 조회 실패:',
+        error
+      );
+    } finally {
+      setIsFetchingMore(false);
+    }
+  };
 
   const hasRegionalFestivals = regionalFestivals.length > 0;
 
@@ -90,7 +124,13 @@ export const RegionalFestivalPage = ({
     >
       <RegionalHeader subtitle={subtitle} title={title} />
 
-      {hasRegionalFestivals ? (
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            color={Colors.pink.pink50}
+          />
+        </View>
+      ) : hasRegionalFestivals ? (
         <>
           <View style={styles.sortSection}>
             <SortDropdown
@@ -103,7 +143,7 @@ export const RegionalFestivalPage = ({
             data={regionalFestivals}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
-            keyExtractor={(item) => String(item.id)}
+            keyExtractor={(item) => String(item.festivalId)}
             renderItem={({ item }) => (
               <MainItemBlock
                 type='festival'
@@ -111,7 +151,7 @@ export const RegionalFestivalPage = ({
                 onPress={() =>
                   router.push({
                     pathname: '/festival-detail/[id]',
-                    params: { id: String(item.id) },
+                    params: { id: String(item.festivalId) },
                   })
                 }
               />
@@ -119,6 +159,17 @@ export const RegionalFestivalPage = ({
             ItemSeparatorComponent={() => (
               <View style={{ height: 10 }} />
             )}
+            onEndReached={fetchMoreFestivals}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+              isFetchingMore ? (
+                <View style={styles.footerLoading}>
+                  <ActivityIndicator
+                    color={Colors.pink.pink50}
+                  />
+                </View>
+              ) : null
+            }
           />
         </>
       ) : (
@@ -135,6 +186,11 @@ export const RegionalFestivalPage = ({
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.gray.gray00,
@@ -147,6 +203,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 2,
     paddingBottom: 10,
+  },
+  footerLoading: {
+    paddingVertical: 20,
+    alignItems: 'center',
   },
   emptyContainer: {
     flex: 1,

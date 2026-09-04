@@ -1,7 +1,6 @@
 import { FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
+import { FestivalStatus } from '@/types/festival';
 import { StyleSheet, Text, View } from 'react-native';
-
-type FestivalStatus = 'upcoming' | 'ongoing' | 'ended';
 
 type Props = {
     status: FestivalStatus;
@@ -11,17 +10,17 @@ type Props = {
 };
 
 const statusConfig = {
-    upcoming: {
+    UPCOMING: {
         label: '개최 전',
         textColor: '#FF8076',
         backgroundColor: '#FFF2F2',
     },
-    ongoing: {
+    ONGOING: {
         label: '개최 중',
         textColor: '#4598FE',
         backgroundColor: '#F2F9FF',
     },
-    ended: {
+    ENDED: {
         label: '종료',
         textColor: '#F2F2F2',
         backgroundColor: '#5A5A5A',

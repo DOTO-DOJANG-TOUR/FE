@@ -1,3 +1,4 @@
+import { getTodayFestivals, getUpcomingFestivals } from '@/apis/festival';
 import ChungbukImage from '@/assets/images/festival/main/festival-main-chungbuk.jpg';
 import ChungnamImage from '@/assets/images/festival/main/festival-main-chungnam.jpg';
 import GangwonImage from '@/assets/images/festival/main/festival-main-gangwon.jpg';
@@ -15,146 +16,97 @@ import TodayFestivalCard from "@/components/festival/main/TodayFestivalCard";
 import UpcomingFestivalCard from '@/components/festival/main/UpcomingFestivalCard';
 import { EmptyIcon } from '@/components/icons/EmptyIcon';
 import { Colors, FontFamily, FontSize, Spacing } from "@/constants/theme";
+import { Festival } from '@/types/festival';
 import { Asset } from 'expo-asset';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-type TodayFestival = {
-    id: number;
-    imageUrl?: string;
-    title: string;
-    startDate: string;
-    endDate: string;
-    region: string;
-};
-
-type UpcomingFestival = {
-    id: number;
-    imageUrl?: string;
-    title: string;
-    startDate: string;
-    region: string;
-};
-
 const regionCategories = [
     {
         id: 1,
         region: '서울',
+        regionGroup: 'SEOUL',
         image: SeoulImage,
     },
     {
         id: 2,
         region: '경기 · 인천',
+        regionGroup: 'GYEONGGI_INCHEON',
         image: gyeongiImage,
     },
     {
         id: 3,
         region: '강원',
+        regionGroup: 'GANGWON',
         image: GangwonImage,
     },
     {
         id: 4,
         region: '충북',
+        regionGroup: 'CHUNGBUK',
         image: ChungbukImage,
     },
     {
         id: 5,
         region: '충남권',
+        regionGroup: 'CHUNGNAM',
         image: ChungnamImage,
     },
     {
         id: 6,
         region: '전북',
+        regionGroup: 'JEONBUK',
         image: JeonbukImage,
     },
     {
         id: 7,
         region: '전남권',
+        regionGroup: 'JEONNAM',
         image: JeonnamImage,
     },
     {
         id: 8,
         region: '경북권',
+        regionGroup: 'GYEONGBUK',
         image: GyeongbukImage,
     },
     {
         id: 9,
         region: '경남권',
+        regionGroup: 'GYEONGNAM',
         image: GyeongnamImage,
     },
     {
         id: 10,
         region: '제주',
+        regionGroup: 'JEJU',
         image: JejuImage,
     },
 ]
 
-// 임시 데이터 - API 연동 시 삭제 예정
-const todayFestivals: TodayFestival[] = [
-    {
-        id: 1,
-        imageUrl: 'https://picsum.photos/seed/festival1/400/600',
-        title: '김악산 꽃별 여행 김악산 김악산 꽃별 여행 김악산',
-        startDate: '2026.9.18',
-        endDate: '2026.10.11',
-        region: '거창군',
-    },
-    {
-        id: 2,
-        imageUrl: 'https://picsum.photos/seed/festival2/400/600',
-        title: '영광불갑산상사화축제',
-        startDate: '2026.9.18',
-        endDate: '2026.09.27',
-        region: '영광군',
-    },
-    {
-        id: 3,
-        imageUrl: undefined,
-        title: '김악산 꽃별 여행 김악산 김악산 꽃별 여행 김악산',
-        startDate: '2026.9.18',
-        endDate: '2026.10.11',
-        region: '거창군',
-    },
-    {
-        id: 4,
-        imageUrl: undefined,
-        title: '영광불갑산상사화축제',
-        startDate: '2026.9.18',
-        endDate: '2026.09.27',
-        region: '영광군',
-    },
-];
-
-const upcomingFestivals: UpcomingFestival[] = [
-    {
-        id: 1,
-        imageUrl: 'https://picsum.photos/seed/festival1/400/600',
-        title: '경남고성공룡세계엑스포',
-        startDate: '2026.9.18',
-        region: '고성군',
-    },
-    {
-        id: 2,
-        imageUrl: 'https://picsum.photos/seed/festival2/400/600',
-        title: '수원화성미디어아트',
-        startDate: '2026.8.30',
-        region: '수원시',
-    },
-    {
-        id: 3,
-        imageUrl: undefined,
-        title: '세계유산축전',
-        startDate: '2026.10.02',
-        region: '안동시',
-    },
-];
-
 export const FestivalMainPage = () => {
     const insets = useSafeAreaInsets();
     const [isLoading, setIsLoading] = useState(true);
+    const [isTodayLoading, setIsTodayLoading] =
+        useState(true);
+    const [isUpcomingLoading, setIsUpcomingLoading] =
+        useState(true);
     const router = useRouter();
+    const [todayFestivals, setTodayFestivals] =
+        useState<Festival[]>([]);
+    const [upcomingFestivals, setUpcomingFestivals] =
+        useState<Festival[]>([]);
+    const [todayNextCursor, setTodayNextCursor] =
+        useState<string | null>(null);
+    const [upcomingNextCursor, setUpcomingNextCursor] =
+        useState<string | null>(null);
+    const [isFetchingTodayMore, setIsFetchingTodayMore] =
+        useState(false);
+    const [isFetchingUpcomingMore, setIsFetchingUpcomingMore] =
+        useState(false);
+
 
     const hasTodayFestivals = todayFestivals.length > 0;
     const hasUpcomingFestivals = upcomingFestivals.length > 0;
@@ -176,16 +128,8 @@ export const FestivalMainPage = () => {
                 JejuImage,
             ];
 
-            const remoteImages = [
-                ...todayFestivals.map((festival) => festival.imageUrl),
-                ...upcomingFestivals.map((festival) => festival.imageUrl),
-            ].filter((url): url is string => Boolean(url));
-
             try {
-                await Promise.allSettled([
-                    Asset.loadAsync(localImages),
-                    ...remoteImages.map((url) => Image.prefetch(url)),
-                ]);
+                await Asset.loadAsync(localImages);
             } finally {
                 if (isMounted) {
                     setIsLoading(false);
@@ -199,6 +143,167 @@ export const FestivalMainPage = () => {
             isMounted = false;
         };
     }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchTodayFestivals = async () => {
+            try {
+                setIsTodayLoading(true);
+
+                const result = await getTodayFestivals();
+
+                const imageUrls = result.festivals
+                    .map((festival) => festival.imageUrl)
+                    .filter((url): url is string => Boolean(url));
+
+                await Promise.allSettled(
+                    imageUrls.map((url) => Image.prefetch(url))
+                );
+
+                if (isMounted) {
+                    setTodayFestivals(result.festivals);
+                    setTodayNextCursor(result.nextCursor ?? null);
+                }
+            } catch (error) {
+                console.error(
+                    '오늘의 축제 조회 실패:',
+                    error
+                );
+            } finally {
+                if (isMounted) {
+                    setIsTodayLoading(false);
+                }
+            }
+        };
+
+        fetchTodayFestivals();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchUpcomingFestivals = async () => {
+            try {
+                setIsUpcomingLoading(true);
+
+                const result = await getUpcomingFestivals();
+
+                const imageUrls = result.festivals
+                    .map((festival) => festival.imageUrl)
+                    .filter((url): url is string => Boolean(url));
+
+                await Promise.allSettled(
+                    imageUrls.map((url) => Image.prefetch(url))
+                );
+
+                if (isMounted) {
+                    setUpcomingFestivals(result.festivals);
+                    setUpcomingNextCursor(
+                        result.nextCursor ?? null
+                    );
+                }
+            } catch (error) {
+                console.error(
+                    '개최 예정 축제 조회 실패:',
+                    error
+                );
+            } finally {
+                if (isMounted) {
+                    setIsUpcomingLoading(false);
+                }
+            }
+        };
+
+        fetchUpcomingFestivals();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    const fetchMoreTodayFestivals = async () => {
+        if (!todayNextCursor || isFetchingTodayMore) {
+            return;
+        }
+
+        try {
+            setIsFetchingTodayMore(true);
+
+            const result = await getTodayFestivals(
+                todayNextCursor
+            );
+
+            const imageUrls = result.festivals
+                .map((festival) => festival.imageUrl)
+                .filter((url): url is string => Boolean(url));
+
+            await Promise.allSettled(
+                imageUrls.map((url) => Image.prefetch(url))
+            );
+
+            setTodayFestivals((prev) => [
+                ...prev,
+                ...result.festivals,
+            ]);
+
+            setTodayNextCursor(
+                result.nextCursor ?? null
+            );
+        } catch (error) {
+            console.error(
+                '오늘의 축제 추가 조회 실패:',
+                error
+            );
+        } finally {
+            setIsFetchingTodayMore(false);
+        }
+    };
+
+    const fetchMoreUpcomingFestivals = async () => {
+        if (
+            !upcomingNextCursor ||
+            isFetchingUpcomingMore
+        ) {
+            return;
+        }
+
+        try {
+            setIsFetchingUpcomingMore(true);
+
+            const result = await getUpcomingFestivals(
+                upcomingNextCursor
+            );
+
+            const imageUrls = result.festivals
+                .map((festival) => festival.imageUrl)
+                .filter((url): url is string => Boolean(url));
+
+            await Promise.allSettled(
+                imageUrls.map((url) => Image.prefetch(url))
+            );
+
+            setUpcomingFestivals((prev) => [
+                ...prev,
+                ...result.festivals,
+            ]);
+
+            setUpcomingNextCursor(
+                result.nextCursor ?? null
+            );
+        } catch (error) {
+            console.error(
+                '개최 예정 축제 추가 조회 실패:',
+                error
+            );
+        } finally {
+            setIsFetchingUpcomingMore(false);
+        }
+    };
 
     if (isLoading) {
         return (
@@ -227,25 +332,29 @@ export const FestivalMainPage = () => {
                         subtitle="오늘의 축제"
                         title={hasTodayFestivals ? "지금 도장 투어 가능해요" : undefined}
                     />
-                    {hasTodayFestivals ? (
+                    {isTodayLoading ? (
+                        <ActivityIndicator
+                            color={Colors.pink.pink50}
+                        />
+                    ) : hasTodayFestivals ? (
                         <FlatList
                             data={todayFestivals}
                             horizontal
                             showsHorizontalScrollIndicator={false}
                             style={styles.list}
                             contentContainerStyle={styles.horizontalListContent}
-                            keyExtractor={(item) => String(item.id)}
+                            keyExtractor={(item) => String(item.festivalId)}
                             renderItem={({ item }) => (
                                 <TodayFestivalCard
                                     imageUrl={item.imageUrl}
                                     title={item.title}
-                                    startDate={item.startDate}
-                                    endDate={item.endDate}
-                                    region={item.region}
+                                    startDate={item.eventStartDate}
+                                    endDate={item.eventEndDate}
+                                    region={item.gunguName}
                                     onPress={() =>
                                         router.push({
                                             pathname: '/festival-detail/[id]',
-                                            params: { id: String(item.id) },
+                                            params: { id: String(item.festivalId) },
                                         })
                                     }
                                 />
@@ -253,6 +362,17 @@ export const FestivalMainPage = () => {
                             ItemSeparatorComponent={() => (
                                 <View style={{ width: 10 }} />
                             )}
+                            onEndReached={fetchMoreTodayFestivals}
+                            onEndReachedThreshold={0.5}
+                            ListFooterComponent={
+                                isFetchingTodayMore ? (
+                                    <View style={styles.horizontalLoading}>
+                                        <ActivityIndicator
+                                            color={Colors.pink.pink50}
+                                        />
+                                    </View>
+                                ) : null
+                            }
                         />
                     ) : (
                         <View style={styles.emptyContainer}>
@@ -282,6 +402,7 @@ export const FestivalMainPage = () => {
                                             params: {
                                                 subtitle: '지역별 축제',
                                                 title: item.region,
+                                                regionGroup: item.regionGroup,
                                             },
                                         })
                                     }
@@ -294,24 +415,28 @@ export const FestivalMainPage = () => {
                     <FestivalMainTitle
                         title="곧 개최 예정인 축제"
                     />
-                    {hasUpcomingFestivals ? (
+                    {isUpcomingLoading ? (
+                        <ActivityIndicator
+                            color={Colors.pink.pink50}
+                        />
+                    ) : hasUpcomingFestivals ? (
                         <FlatList
                             data={upcomingFestivals}
                             horizontal
                             showsHorizontalScrollIndicator={false}
                             style={styles.list}
                             contentContainerStyle={styles.horizontalListContent}
-                            keyExtractor={(item) => String(item.id)}
+                            keyExtractor={(item) => String(item.festivalId)}
                             renderItem={({ item }) => (
                                 <UpcomingFestivalCard
                                     imageUrl={item.imageUrl}
                                     title={item.title}
-                                    startDate={item.startDate}
-                                    region={item.region}
+                                    startDate={item.eventStartDate}
+                                    region={item.gunguName}
                                     onPress={() =>
                                         router.push({
                                             pathname: '/festival-detail/[id]',
-                                            params: { id: String(item.id) },
+                                            params: { id: String(item.festivalId) },
                                         })
                                     }
                                 />
@@ -319,6 +444,17 @@ export const FestivalMainPage = () => {
                             ItemSeparatorComponent={() => (
                                 <View style={{ width: 10 }} />
                             )}
+                            onEndReached={fetchMoreUpcomingFestivals}
+                            onEndReachedThreshold={0.5}
+                            ListFooterComponent={
+                                isFetchingUpcomingMore ? (
+                                    <View style={styles.horizontalLoading}>
+                                        <ActivityIndicator
+                                            color={Colors.pink.pink50}
+                                        />
+                                    </View>
+                                ) : null
+                            }
                         />
                     ) : (
                         <View style={styles.emptyContainer}>
@@ -357,9 +493,15 @@ const styles = StyleSheet.create({
     },
     horizontalListContent: {
         paddingHorizontal: 20,
+        alignItems: 'center',
     },
     horizontalPadding: {
         paddingHorizontal: 20,
+    },
+    horizontalLoading: {
+        width: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     emptyContainer: {
         paddingTop: 60,
