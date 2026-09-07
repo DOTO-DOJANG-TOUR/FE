@@ -1,8 +1,11 @@
 import TextLogo from '@/assets/images/festival/common/text-logo.png';
 import { SearchIcon } from '@/components/icons/SearchIcon';
-import { Image, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 export default function FestivalMainHeader() {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
       <Image
@@ -10,7 +13,12 @@ export default function FestivalMainHeader() {
         style={styles.image}
         resizeMode="contain"
       />
-      <SearchIcon />
+      <Pressable
+        style={styles.searchButton}
+        onPress={() => router.push('/search/festival')}
+      >
+        <SearchIcon />
+      </Pressable>
     </View>
   )
 }
@@ -26,4 +34,10 @@ const styles = StyleSheet.create({
     width: 55,
     height: 16,
   },
+  searchButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
 });
