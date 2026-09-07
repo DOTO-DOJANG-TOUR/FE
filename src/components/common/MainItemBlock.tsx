@@ -1,27 +1,47 @@
+import DefaultImage from '@/assets/images/festival/common/card-dim-2.png';
 import { FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
+import { FestivalContent } from '@/types/festival';
+import { TourContent } from '@/types/tour';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { FestivalCategoryBadge } from './FestivalCategoryBadge';
 import { FestivalStatusBadge } from './FestivalStatusBadge';
 
-type CardType = 'festival' | 'tour';
-type FestivalStatus = 'upcoming' | 'ongoing' | 'ended';
+type Props =
+  | {
+    type: 'festival';
+    festival: FestivalContent;
+  }
+  | {
+    type: 'tour';
+    tour: TourContent;
+  };
 
-type Props = {
-  type: CardType;
-  status?: FestivalStatus;
-};
+export const MainItemBlock = (props: Props) => {
+  const content =
+    props.type === 'festival'
+      ? props.festival
+      : props.tour;
 
-export const MainItemBlock = ({ type, status }: Props) => {
+  const {
+    imageUrl,
+    title,
+    category,
+  } = content;
+
   return (
     <View style={styles.card}>
       <View style={styles.imageContainer}>
         <Image
-          source={{ uri: 'https://picsum.photos/seed/festival/140' }}
+          source={
+            imageUrl
+              ? { uri: imageUrl }
+              : DefaultImage
+          }
           style={styles.image}
         />
-        {status && (
+        {props.type === 'festival' && (
           <View style={styles.statusBadge}>
-            <FestivalStatusBadge status={status} />
+            <FestivalStatusBadge status={props.festival.status} />
           </View>
         )}
       </View>
@@ -32,21 +52,21 @@ export const MainItemBlock = ({ type, status }: Props) => {
             ellipsizeMode="tail"
             style={styles.title}
           >
-            김악산 꽃별 여행 김악산 꽃별 여행 김악산 꽃별 여행 김악산 꽃별 여행
+            {title}
           </Text>
-          {type === 'festival' ? (
+          {props.type === 'festival' ? (
             <>
-              <Text style={styles.text}>거창군</Text>
-              <Text style={styles.text}>2026.9.18 ~ 2026.10.11</Text>
+              <Text style={styles.text}>{props.festival.region}</Text>
+              <Text style={styles.text}>{props.festival.startDate} ~ {props.festival.endDate}</Text>
             </>
           ) : (
-            <Text style={styles.text}>179m · 여수시 중앙로 74</Text>
+            <Text style={styles.text}>{props.tour.distance}m · {props.tour.address}</Text>
           )}
         </View>
-        
+
 
         {/* 카테고리 code는 api연동 후 수정 */}
-        <FestivalCategoryBadge category='EV010200' />
+        <FestivalCategoryBadge category={category} />
       </View>
     </View>
   )
