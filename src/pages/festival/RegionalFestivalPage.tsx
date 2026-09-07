@@ -4,6 +4,7 @@ import SortDropdown from '@/components/festival/region/SortDropdown';
 import { EmptyIcon } from '@/components/icons/EmptyIcon';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { FestivalContent } from '@/types/festival';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -63,6 +64,7 @@ export const RegionalFestivalPage = ({
 }: Props) => {
   const insets = useSafeAreaInsets();
   const [sort, setSort] = useState('ENDING_SOON');
+  const router = useRouter();
 
   const sortOptions = [
     {
@@ -106,6 +108,12 @@ export const RegionalFestivalPage = ({
               <MainItemBlock
                 type='festival'
                 festival={item}
+                onPress={() =>
+                  router.push({
+                    pathname: '/festival-detail/[id]',
+                    params: { id: String(item.id) },
+                  })
+                }
               />
             )}
             ItemSeparatorComponent={() => (

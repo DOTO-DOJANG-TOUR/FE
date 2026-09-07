@@ -1,7 +1,7 @@
 import DefaultTodayFestivalImage from '@/assets/images/festival/common/card-dim.png';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useEffect, useState } from 'react';
-import { ImageBackground, StyleSheet, Text, View } from 'react-native';
+import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
   imageUrl?: string;
@@ -9,6 +9,7 @@ type Props = {
   startDate: string;
   endDate: string;
   region: string;
+  onPress?: () => void;
 };
 
 export default function TodayFestivalCard({
@@ -17,6 +18,7 @@ export default function TodayFestivalCard({
   startDate,
   endDate,
   region,
+  onPress,
 }: Props) {
   const [imageError, setImageError] = useState(false);
 
@@ -30,28 +32,30 @@ export default function TodayFestivalCard({
       : DefaultTodayFestivalImage;
 
   return (
-    <ImageBackground
-      source={imageSource}
-      style={styles.container}
-      imageStyle={styles.image}
-      resizeMode="cover"
-      onError={() => setImageError(true)}
-    >
-      <View style={[StyleSheet.absoluteFill, styles.overlay]} />
-      <View style={styles.content}>
-        <Text
-          style={styles.title}
-          numberOfLines={1}
-          ellipsizeMode='tail'
-        >{title}</Text>
-        <Text
-          style={styles.date}
-        >{startDate} ~ {endDate}</Text>
-        <Text
-          style={styles.region}
-        >{region}</Text>
-      </View>
-    </ImageBackground>
+    <Pressable onPress={onPress}>
+      <ImageBackground
+        source={imageSource}
+        style={styles.container}
+        imageStyle={styles.image}
+        resizeMode="cover"
+        onError={() => setImageError(true)}
+      >
+        <View style={[StyleSheet.absoluteFill, styles.overlay]} />
+        <View style={styles.content}>
+          <Text
+            style={styles.title}
+            numberOfLines={1}
+            ellipsizeMode='tail'
+          >{title}</Text>
+          <Text
+            style={styles.date}
+          >{startDate} ~ {endDate}</Text>
+          <Text
+            style={styles.region}
+          >{region}</Text>
+        </View>
+      </ImageBackground>
+    </Pressable>
   )
 }
 
