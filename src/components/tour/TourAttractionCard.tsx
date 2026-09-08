@@ -1,5 +1,5 @@
 import { CategoryBadge } from '@/components/common/CategoryBadge';
-import { FontFamily, FontSize, Spacing } from '@/constants/theme';
+import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import type { TourAttraction } from '@/types/tour';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CheckerPlaceholder } from './CheckerPlaceholder';
@@ -49,14 +49,14 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   title: {
-    color: '#262626',
+    color: Colors.gray.gray100,
     fontSize: FontSize.md,
     lineHeight: FontSize.md * 1.5,
     fontFamily: FontFamily.semiBold,
   },
   subtitle: {
     marginTop: Spacing.one,
-    color: '#262626',
+    color: Colors.gray.gray100,
     fontSize: FontSize.xs,
     lineHeight: FontSize.xs * 1.5,
     fontFamily: FontFamily.regular,
