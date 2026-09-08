@@ -7,10 +7,12 @@ type FestivalCategoryCode =
   | 'EV010600';
 
 export type TourContent = {
-  id: number;
-  imageUrl?: string;
+  tourSpotId: string;
   title: string;
-  distance: number;
+  imageUrl?: string;
   address: string;
-  category: FestivalCategoryCode;
+  mapX: string;
+  mapY: string;
+  category: string;
+  distance: string;
 };
