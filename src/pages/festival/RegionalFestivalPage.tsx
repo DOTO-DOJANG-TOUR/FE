@@ -151,7 +151,7 @@ export const RegionalFestivalPage = ({
                 onPress={() =>
                   router.push({
                     pathname: '/festival-detail/[id]',
-                    params: { id: String(item.festivalId) },
+                    params: { id: item.festivalId },
                   })
                 }
               />

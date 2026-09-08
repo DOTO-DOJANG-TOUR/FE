@@ -1,5 +1,5 @@
 import { ApiResponse } from '@/types/api';
-import { Festival, FestivalContent, FestivalListResult } from '@/types/festival';
+import { DojangTourStatusResult, Festival, FestivalContent, FestivalDetail, FestivalListResult } from '@/types/festival';
 import { apiFetch } from './client';
 
 export const getTodayFestivals = async (
@@ -58,3 +58,23 @@ export const getRegionalFestivals = async (
 
   return response.result;
 };
+
+export const getFestivalDetail = async (
+  festivalId: string,
+): Promise<FestivalDetail> => {
+  const response = await apiFetch<ApiResponse<FestivalDetail>>(
+    `/api/v1/festival/${festivalId}`
+  );
+
+  return response.result;
+}
+
+export const getFestivalDojangTourStatus = async (
+  festivalId: string,
+): Promise<DojangTourStatusResult> => {
+  const response = await apiFetch<ApiResponse<DojangTourStatusResult>>(
+    `/api/v1/festival/${festivalId}/stamp-tour`
+  );
+
+  return response.result;
+}
