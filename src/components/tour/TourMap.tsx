@@ -1,8 +1,9 @@
+import { SearchIcon } from '@/components/icons/SearchIcon';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import type { TourCategory } from '@/types/tour';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CheckerPlaceholder } from './CheckerPlaceholder';
-import { CurrentLocationIcon, SearchIcon } from './TourIcons';
+import { CurrentLocationIcon } from './TourIcons';
 
 type Props = {
   selectedCategory?: TourCategory | 'menu';
@@ -83,7 +84,7 @@ export function TourMap({
           style={styles.searchBar}
           onPress={onSearchPress}
         >
-          <SearchIcon />
+          <SearchIcon size={20} />
           <Text style={styles.searchPlaceholder}>방문하고 싶은 관광지 검색</Text>
         </Pressable>
       </View>

@@ -1,4 +1,7 @@
 import { DojangTourButton } from '@/components/common/DojangTourButton';
+import { LocationIcon } from '@/components/icons/LocationIcon';
+import { PhoneIcon } from '@/components/icons/PhoneIcon';
+import { WebIcon } from '@/components/icons/WebIcon';
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { TourColors } from '@/constants/tourTheme';
 import type { TourAttraction } from '@/types/tour';
@@ -14,7 +17,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { CheckerPlaceholder } from './CheckerPlaceholder';
-import { CloseIcon, GlobeIcon, PhoneIcon, PinIcon } from './TourIcons';
+import { CloseIcon } from './TourIcons';
 import { TourVisitConfirmModal } from './TourVisitConfirmModal';
 
 type Props = {
@@ -117,9 +120,9 @@ export function TourDetailBottomSheet({
             </ScrollView>
 
             <View style={styles.infoGroup}>
-              <InfoRow icon={<PinIcon />} text={attraction.address} />
+              <InfoRow icon={<LocationIcon />} text={attraction.address} />
               <InfoRow icon={<PhoneIcon />} text={attraction.phone} />
-              <InfoRow icon={<GlobeIcon />} text={attraction.homepage} isLink />
+              <InfoRow icon={<WebIcon />} text={attraction.homepage} isLink />
             </View>
           </ScrollView>
         )}

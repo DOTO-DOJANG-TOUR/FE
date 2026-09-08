@@ -6,15 +6,6 @@ type IconProps = {
   size?: number;
 };
 
-export function SearchIcon({ color = Colors.gray.gray60, size = 20 }: IconProps) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 20 20" fill="none">
-      <Circle cx="8.7" cy="8.7" r="5.4" stroke={color} strokeWidth="1.7" />
-      <Path d="M12.7 12.7L16.5 16.5" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
-    </Svg>
-  );
-}
-
 export function CurrentLocationIcon({ color = Colors.gray.gray100, size = 22 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 22 22" fill="none">
