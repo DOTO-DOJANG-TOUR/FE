@@ -1,4 +1,3 @@
-import { DotoFlowerIcon } from '@/components/icons';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import type { TourCategory } from '@/types/tour';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -8,9 +7,11 @@ import { CurrentLocationIcon, SearchIcon } from './TourIcons';
 type Props = {
   selectedCategory?: TourCategory | 'menu';
   selectedMarkerId?: string;
+  showCurrentLocation?: boolean;
   locationBottom?: number;
   onSearchPress?: () => void;
   onLocationPress?: () => void;
+  onMarkerPress?: (markerId: string) => void;
 };
 
 const markerData: {
@@ -33,9 +34,11 @@ const markerData: {
 export function TourMap({
   selectedCategory = 'menu',
   selectedMarkerId,
+  showCurrentLocation = false,
   locationBottom = 192,
   onSearchPress,
   onLocationPress,
+  onMarkerPress,
 }: Props) {
   const visibleMarkers = markerData.filter(
     (marker) => selectedCategory === 'menu' || marker.category === selectedCategory,
@@ -49,9 +52,12 @@ export function TourMap({
         const selected = marker.id === selectedMarkerId;
 
         return (
-          <View
+          <Pressable
             key={marker.id}
+            accessibilityRole="button"
+            accessibilityLabel={`${marker.label} 관광지 상세 보기`}
             style={[styles.markerPosition, { left: marker.left, top: marker.top }]}
+            onPress={() => onMarkerPress?.(marker.id)}
           >
             <View style={[styles.marker, selected && styles.selectedMarker]}>
               <Text style={[styles.markerText, selected && styles.selectedMarkerText]}>
@@ -59,9 +65,16 @@ export function TourMap({
               </Text>
             </View>
             <View style={[styles.markerTail, selected && styles.selectedMarkerTail]} />
-          </View>
+          </Pressable>
         );
       })}
+
+      {showCurrentLocation && (
+        <View pointerEvents="none" style={styles.currentLocationMarker}>
+          <View style={styles.currentLocationPulse} />
+          <View style={styles.currentLocationDot} />
+        </View>
+      )}
 
       <View style={styles.searchRow}>
         <Pressable
@@ -73,9 +86,6 @@ export function TourMap({
           <SearchIcon />
           <Text style={styles.searchPlaceholder}>방문하고 싶은 관광지 검색</Text>
         </Pressable>
-        <View style={styles.mascotButton}>
-          <DotoFlowerIcon size={31} />
-        </View>
       </View>
 
       <Pressable
@@ -96,9 +106,6 @@ const styles = StyleSheet.create({
     top: 48,
     left: 20,
     right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
   searchBar: {
     height: 48,
@@ -115,15 +122,6 @@ const styles = StyleSheet.create({
     color: Colors.gray.gray60,
     fontSize: 14,
     fontFamily: FontFamily.regular,
-  },
-  mascotButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: Radius.md,
-    backgroundColor: '#4E9C66',
-    boxShadow: '0 2px 8px rgba(38, 38, 38, 0.12)',
   },
   markerPosition: {
     position: 'absolute',
@@ -169,6 +167,30 @@ const styles = StyleSheet.create({
     height: 10,
     marginTop: -6,
     backgroundColor: Colors.pink.pink50,
+  },
+  currentLocationMarker: {
+    position: 'absolute',
+    left: '49%',
+    top: '59%',
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  currentLocationPulse: {
+    position: 'absolute',
+    width: 48,
+    height: 48,
+    borderRadius: Radius.full,
+    backgroundColor: 'rgba(53, 139, 255, 0.16)',
+  },
+  currentLocationDot: {
+    width: 16,
+    height: 16,
+    borderWidth: 3,
+    borderColor: Colors.gray.gray00,
+    borderRadius: Radius.full,
+    backgroundColor: '#358BFF',
   },
   locationButton: {
     position: 'absolute',

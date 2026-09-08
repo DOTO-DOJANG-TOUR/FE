@@ -6,7 +6,7 @@ import { TourColors } from '@/constants/tourTheme';
 import type { TourAttraction, TourFilterCategory } from '@/types/tour';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 export default function TourScreen() {
   const { empty } = useLocalSearchParams<{ empty?: string }>();
@@ -43,24 +43,18 @@ export default function TourScreen() {
     <View style={styles.container}>
       <TourMap
         selectedCategory={selectedCategory}
+        showCurrentLocation={locationCentered}
         locationBottom={
           expanded
             ? TOUR_SHEET_HEIGHT.expanded + 20
             : TOUR_SHEET_HEIGHT.collapsed + 20
         }
         onSearchPress={() => router.push('/tour-search')}
-        onLocationPress={() => setLocationCentered((centered) => !centered)}
+        onLocationPress={() => setLocationCentered(true)}
+        onMarkerPress={(markerId) =>
+          router.push({ pathname: '/visit', params: { attractionId: markerId } })
+        }
       />
-
-      {locationCentered && (
-        <Pressable
-          accessibilityRole="button"
-          style={styles.locationToast}
-          onPress={() => setLocationCentered(false)}
-        >
-          <Text style={styles.locationToastText}>현재 위치로 지도를 이동했어요</Text>
-        </Pressable>
-      )}
 
       <TourBottomSheet
         expanded={expanded}
@@ -84,20 +78,6 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
     backgroundColor: Colors.gray.gray20,
-  },
-  locationToast: {
-    position: 'absolute',
-    top: 108,
-    alignSelf: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: Radius.full,
-    backgroundColor: 'rgba(38, 38, 38, 0.82)',
-  },
-  locationToastText: {
-    color: Colors.gray.gray00,
-    fontSize: FontSize.xs,
-    fontFamily: FontFamily.medium,
   },
   noTourContainer: {
     flex: 1,
