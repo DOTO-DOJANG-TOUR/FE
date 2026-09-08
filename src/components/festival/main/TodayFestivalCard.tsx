@@ -49,7 +49,7 @@ export default function TodayFestivalCard({
           >{title}</Text>
           <Text
             style={styles.date}
-          >{startDate} ~ {endDate}</Text>
+          >{startDate.replace(/-/g, '.')} ~ {endDate.replace(/-/g, '.')}</Text>
           <Text
             style={styles.region}
           >{region}</Text>
