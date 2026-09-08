@@ -1,3 +1,4 @@
+import { searchFestivals, searchTours } from '@/apis/search';
 import { MainItemBlock } from '@/components/common/MainItemBlock';
 import { DeleteIcon } from '@/components/icons/DeleteIcon';
 import { EmptyIcon } from '@/components/icons/EmptyIcon';
@@ -8,25 +9,38 @@ import { FestivalContent } from '@/types/festival';
 import { TourContent } from '@/types/tour';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = {
   type: 'festival' | 'tour';
+  festivalId?: string;
 };
 
-export default function SearchPage({ type }: Props) {
+type SearchStatus =
+  | 'idle'
+  | 'loading'
+  | 'success';
+
+export default function SearchPage({
+  type,
+  festivalId,
+}: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const [keyword, setKeyword] = useState('');
-  const [hasSearched, setHasSearched] = useState(false);
+  const [searchStatus, setSearchStatus] =
+    useState<SearchStatus>('idle');
 
   const [festivalResults, setFestivalResults] =
     useState<FestivalContent[]>([]);
-
   const [tourResults, setTourResults] =
     useState<TourContent[]>([]);
+  const [festivalNextCursor, setFestivalNextCursor] =
+    useState<string | null>(null);
+  const [isFetchingMore, setIsFetchingMore] =
+    useState(false);
 
   const recentSearches = useRecentSearchStore(
     (state) => state.recentSearches[type]
@@ -50,15 +64,100 @@ export default function SearchPage({ type }: Props) {
     if (!trimmedKeyword) return;
 
     addRecentSearch(type, trimmedKeyword);
+    setKeyword(trimmedKeyword);
 
-    setHasSearched(true);
+    setSearchStatus('loading');
 
-    if (type === 'festival') {
-      // 축제 검색 API 호출 예정
+
+    try {
+      if (type === 'festival') {
+        setFestivalResults([]);
+        setFestivalNextCursor(null);
+
+        const result = await searchFestivals(
+          trimmedKeyword
+        );
+
+        setFestivalResults(result.festivals);
+        setFestivalNextCursor(
+          result.nextCursor ?? null
+        );
+
+        setSearchStatus('success');
+        return
+      }
+
+      if (!festivalId) {
+        console.error(
+          '관광지 검색에 festivalId가 필요합니다.'
+        );
+
+        setTourResults([]);
+        setSearchStatus('success');
+        return;
+      }
+
+      setTourResults([]);
+
+      const result = await searchTours(
+        festivalId,
+        trimmedKeyword
+      );
+
+      setTourResults(result);
+      setSearchStatus('success');
+    } catch (error) {
+      console.error(
+        type === 'festival'
+          ? '축제 검색 실패:'
+          : '관광지 검색 실패:',
+        error
+      );
+
+      if (type === 'festival') {
+        setFestivalResults([]);
+        setFestivalNextCursor(null);
+      } else {
+        setTourResults([]);
+      }
+
+      setSearchStatus('success');
+    }
+  };
+
+  const fetchMoreFestivalResults = async () => {
+    if (
+      type !== 'festival' ||
+      !festivalNextCursor ||
+      isFetchingMore
+    ) {
       return;
     }
 
-    // 관광지 검색 API 호출 예정
+    try {
+      setIsFetchingMore(true);
+
+      const result = await searchFestivals(
+        keyword.trim(),
+        festivalNextCursor
+      );
+
+      setFestivalResults((prev) => [
+        ...prev,
+        ...result.festivals,
+      ]);
+
+      setFestivalNextCursor(
+        result.nextCursor ?? null
+      );
+    } catch (error) {
+      console.error(
+        '축제 검색 추가 조회 실패:',
+        error
+      );
+    } finally {
+      setIsFetchingMore(false);
+    }
   };
 
   const handleRecentSearch = (item: string) => {
@@ -79,12 +178,18 @@ export default function SearchPage({ type }: Props) {
         onChangeKeyword={setKeyword}
         onSearch={() => handleSearch()}
       />
-      {hasSearched ? (
+      {searchStatus === 'loading' ? (
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator
+            color={Colors.pink.pink50}
+          />
+        </View>
+      ) : searchStatus === 'success' ? (
         type === 'festival' ? (
           festivalResults.length > 0 ? (
             <FlatList
               data={festivalResults}
-              keyExtractor={(item) => String(item.id)}
+              keyExtractor={(item) => String(item.festivalId)}
               contentContainerStyle={styles.resultList}
               showsVerticalScrollIndicator={false}
               ItemSeparatorComponent={() => (
@@ -98,12 +203,23 @@ export default function SearchPage({ type }: Props) {
                     router.push({
                       pathname: '/festival-detail/[id]',
                       params: {
-                        id: String(item.id),
+                        id: String(item.festivalId),
                       },
                     })
                   }
                 />
               )}
+              onEndReached={fetchMoreFestivalResults}
+              onEndReachedThreshold={0.5}
+              ListFooterComponent={
+                isFetchingMore ? (
+                  <View style={styles.footerLoading}>
+                    <ActivityIndicator
+                      color={Colors.pink.pink50}
+                    />
+                  </View>
+                ) : null
+              }
             />
           ) : (
             <View style={styles.emptyContainer}>
@@ -118,7 +234,7 @@ export default function SearchPage({ type }: Props) {
           tourResults.length > 0 ? (
             <FlatList
               data={tourResults}
-              keyExtractor={(item) => String(item.id)}
+              keyExtractor={(item) => String(item.tourSpotId)}
               contentContainerStyle={styles.resultList}
               showsVerticalScrollIndicator={false}
               ItemSeparatorComponent={() => (
@@ -248,5 +364,9 @@ const styles = StyleSheet.create({
 
   separator: {
     height: 10,
+  },
+  footerLoading: {
+    paddingVertical: 20,
+    alignItems: 'center',
   },
 });
