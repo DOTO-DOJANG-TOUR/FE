@@ -1,4 +1,3 @@
-import { ApiResponse } from '@/types/api';
 import { DojangTourStatusResult, Festival, FestivalContent, FestivalDetail, FestivalListResult } from '@/types/festival';
 import { apiFetch } from './client';
 
@@ -13,11 +12,11 @@ export const getTodayFestivals = async (
 
   const query = params.toString();
 
-  const response = await apiFetch<ApiResponse<FestivalListResult<Festival>>>(
+  const response = await apiFetch<FestivalListResult<Festival>>(
     `/api/v1/festival/today${query ? `?${query}` : ''}`
   );
 
-  return response.result;
+  return response;
 };
 
 export const getUpcomingFestivals = async (
@@ -31,11 +30,11 @@ export const getUpcomingFestivals = async (
 
   const query = params.toString();
 
-  const response = await apiFetch<ApiResponse<FestivalListResult<Festival>>>(
+  const response = await apiFetch<FestivalListResult<Festival>>(
     `/api/v1/festival/future${query ? `?${query}` : ''}`
   );
 
-  return response.result;
+  return response;
 };
 
 export const getRegionalFestivals = async (
@@ -52,29 +51,29 @@ export const getRegionalFestivals = async (
     params.append('cursor', cursor);
   }
 
-  const response = await apiFetch<ApiResponse<FestivalListResult<FestivalContent>>>(
+  const response = await apiFetch<FestivalListResult<FestivalContent>>(
     `/api/v1/festival/region?${params.toString()}`
   );
 
-  return response.result;
+  return response;
 };
 
 export const getFestivalDetail = async (
   festivalId: string,
 ): Promise<FestivalDetail> => {
-  const response = await apiFetch<ApiResponse<FestivalDetail>>(
+  const response = await apiFetch<FestivalDetail>(
     `/api/v1/festival/${festivalId}`
   );
 
-  return response.result;
+  return response;
 }
 
 export const getFestivalDojangTourStatus = async (
   festivalId: string,
 ): Promise<DojangTourStatusResult> => {
-  const response = await apiFetch<ApiResponse<DojangTourStatusResult>>(
+  const response = await apiFetch<DojangTourStatusResult>(
     `/api/v1/festival/${festivalId}/stamp-tour`
   );
 
-  return response.result;
+  return response;
 }
