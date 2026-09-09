@@ -9,6 +9,7 @@ type Props = {
   selectedCategory?: TourCategory | 'menu';
   selectedMarkerId?: string;
   showCurrentLocation?: boolean;
+  showLocationButton?: boolean;
   locationBottom?: number;
   onSearchPress?: () => void;
   onLocationPress?: () => void;
@@ -36,6 +37,7 @@ export function TourMap({
   selectedCategory = 'menu',
   selectedMarkerId,
   showCurrentLocation = false,
+  showLocationButton = true,
   locationBottom = 192,
   onSearchPress,
   onLocationPress,
@@ -89,14 +91,16 @@ export function TourMap({
         </Pressable>
       </View>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="내 위치로 이동"
-        style={[styles.locationButton, { bottom: locationBottom }]}
-        onPress={onLocationPress}
-      >
-        <CurrentLocationIcon />
-      </Pressable>
+      {showLocationButton && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="내 위치로 이동"
+          style={[styles.locationButton, { bottom: locationBottom }]}
+          onPress={onLocationPress}
+        >
+          <CurrentLocationIcon />
+        </Pressable>
+      )}
     </View>
   );
 }

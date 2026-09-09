@@ -21,7 +21,8 @@ export function CheckerPlaceholder({
     <View style={[styles.container, rounded && styles.rounded, style]}>
       {cells.map((_, index) => {
         const row = Math.floor(index / columns);
-        const isDark = (row + index) % 2 === 0;
+        const column = index % columns;
+        const isDark = (row + column) % 2 === 0;
 
         return (
           <View

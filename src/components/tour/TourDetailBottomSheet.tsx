@@ -40,7 +40,10 @@ export function TourDetailBottomSheet({
   onVisited,
 }: Props) {
   const { height: screenHeight } = useWindowDimensions();
-  const expandedHeight = Math.min(600, screenHeight - 196);
+  const expandedHeight = Math.max(
+    COLLAPSED_HEIGHT,
+    Math.min(600, screenHeight - 196),
+  );
   const [height] = useState(() => new Animated.Value(expandedHeight));
   const [confirmVisible, setConfirmVisible] = useState(false);
 
