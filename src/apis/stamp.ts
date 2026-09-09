@@ -1,3 +1,4 @@
+import { TourStampListResult } from "@/types/tour";
 import { apiFetch } from "./client";
 
 export const startStampTour = async (
@@ -21,3 +22,11 @@ export const stopStampTour = async (
     },
   );
 };
+
+export const getMyStamps = async (): Promise<TourStampListResult> => {
+  const response = await apiFetch<TourStampListResult>(
+    `/api/v1/stamps/my-tours`
+  );
+
+  return response;
+}

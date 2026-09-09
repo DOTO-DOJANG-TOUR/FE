@@ -1,3 +1,5 @@
+import { DojangTourStatus } from "./festival";
+
 type FestivalCategoryCode =
   | 'EV010100'
   | 'EV010200'
@@ -15,4 +17,18 @@ export type TourContent = {
   mapY: string;
   category: string;
   distance: string;
+};
+
+export type MyTourStamp = {
+  festivalId: string;
+  title: string;
+  imageUrl?: string;
+  stampCount: number;
+  eventEndDate: string;
+  status: DojangTourStatus;
+}
+
+export type TourStampListResult = {
+  rewardedTourCount: number;
+  tours: MyTourStamp[];
 };

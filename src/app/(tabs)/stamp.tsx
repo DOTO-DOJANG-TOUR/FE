@@ -1,18 +1,3 @@
-import { StyleSheet, Text, View } from 'react-native';
+import StampPage from "@/pages/stamp/StampPage";
 
-export default function StampScreen() {
-  return (
-    <View style={styles.container}>
-      <Text>도장</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-});
+export default StampPage;
