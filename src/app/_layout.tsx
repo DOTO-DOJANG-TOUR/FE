@@ -65,7 +65,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="festival-detail" />
           <Stack.Screen name="festival-search" />
-          <Stack.Screen name="tour-search" />
+          <Stack.Screen name="search" />
           <Stack.Screen name="visit" />
         </Stack.Protected>
       </Stack>
