@@ -64,7 +64,7 @@ async function requestGoogleIdToken() {
 
     GoogleSignin.configure({
       webClientId,
-      scopes: ['email', 'profile'],
+      scopes: ['openid', 'email', 'profile'],
       offlineAccess: false,
     });
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });

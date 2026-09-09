@@ -155,6 +155,7 @@ export async function apiFetch<T>(
   }
 
   const body = await readBody(response);
+  console.log('[apiFetch]', init.method ?? 'GET', path, '-> status', response.status, 'body =', JSON.stringify(body));
   const error = getApiError(response, body, `요청에 실패했습니다. (${response.status})`);
   if (error) throw error;
 
