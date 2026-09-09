@@ -8,7 +8,7 @@ export default function FestivalDetail() {
 
   return (
     <FestivalDetailPage
-      festivalId={Number(id)}
+      festivalId={id}
     />
   );
 }

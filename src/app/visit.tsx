@@ -1,18 +1,3 @@
-import { StyleSheet, Text, View } from 'react-native';
+import TourVisitPage from '@/pages/tour/TourVisitPage';
 
-export default function VisitScreen() {
-  return (
-    <View style={styles.container}>
-      <Text>방문</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-});
+export default TourVisitPage;

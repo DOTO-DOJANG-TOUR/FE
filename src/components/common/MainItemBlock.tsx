@@ -61,8 +61,8 @@ export const MainItemBlock = (props: Props) => {
           </Text>
           {props.type === 'festival' ? (
             <>
-              <Text style={styles.text}>{props.festival.region}</Text>
-              <Text style={styles.text}>{props.festival.startDate} ~ {props.festival.endDate}</Text>
+              <Text style={styles.text}>{props.festival.gunguName}</Text>
+              <Text style={styles.text}>{props.festival.eventStartDate} ~ {props.festival.eventEndDate}</Text>
             </>
           ) : (
             <Text style={styles.text}>{props.tour.distance}m · {props.tour.address}</Text>

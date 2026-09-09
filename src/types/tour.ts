@@ -1,4 +1,4 @@
-type FestivalCategoryCode =
+export type TourCategoryCode =
   | 'EV010100'
   | 'EV010200'
   | 'EV010300'
@@ -7,10 +7,27 @@ type FestivalCategoryCode =
   | 'EV010600';
 
 export type TourContent = {
-  id: number;
-  imageUrl?: string;
+  tourSpotId: string;
   title: string;
-  distance: number;
+  imageUrl?: string;
   address: string;
-  category: FestivalCategoryCode;
+  mapX: string;
+  mapY: string;
+  category: string;
+  distance: string;
+};
+
+export type TourFilterCategory = 'menu' | 'culture' | 'history' | 'nature' | 'experience';
+export type TourCategory = Exclude<TourFilterCategory, 'menu'>;
+
+export type TourAttraction = {
+  id: string;
+  title: string;
+  distance: string;
+  address: string;
+  phone: string;
+  homepage: string;
+  category: TourCategory;
+  imageCount: number;
+  visited?: boolean;
 };
