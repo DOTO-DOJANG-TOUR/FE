@@ -1,6 +1,6 @@
 import { CategoryBadge } from '@/components/common/CategoryBadge';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
-import { TourColors } from '@/constants/tourTheme';
+import { TourColors, TourTypography } from '@/constants/tourTheme';
 import type { TourAttraction, TourFilterCategory } from '@/types/tour';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     backgroundColor: Colors.gray.gray00,
-    boxShadow: '0 -2px 10px rgba(38, 38, 38, 0.06)',
+    boxShadow: TourColors.sheetShadow,
   },
   handleArea: {
     height: 28,
@@ -184,8 +184,8 @@ const styles = StyleSheet.create({
   },
   title: {
     color: Colors.gray.gray100,
-    fontSize: 18,
-    lineHeight: 27,
+    fontSize: TourTypography.title,
+    lineHeight: TourTypography.title * 1.5,
     fontFamily: FontFamily.semiBold,
   },
   categoryRow: {
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   emptyIconText: {
     color: TourColors.gray50,
     fontSize: 12,
-    lineHeight: 14,
+    lineHeight: FontSize.xs * 1.5,
   },
   emptyText: {
     color: Colors.gray.gray60,

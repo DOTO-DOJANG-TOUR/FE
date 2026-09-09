@@ -2,7 +2,7 @@ import { TOUR_SHEET_HEIGHT, TourBottomSheet } from '@/components/tour/TourBottom
 import { TourMap } from '@/components/tour/TourMap';
 import { ACTIVE_TOUR_TITLE, TOUR_ATTRACTIONS } from '@/constants/tourMockData';
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
-import { TourColors } from '@/constants/tourTheme';
+import { TourColors, TourTypography } from '@/constants/tourTheme';
 import type { TourAttraction, TourFilterCategory } from '@/types/tour';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -98,12 +98,12 @@ const styles = StyleSheet.create({
   },
   noTourIconText: {
     color: TourColors.gray50,
-    fontSize: 13,
+    fontSize: TourTypography.compact,
   },
   noTourTitle: {
     color: Colors.gray.gray70,
     fontSize: FontSize.sm,
-    lineHeight: 21,
+    lineHeight: FontSize.sm * 1.5,
     fontFamily: FontFamily.medium,
   },
   noTourDescription: {

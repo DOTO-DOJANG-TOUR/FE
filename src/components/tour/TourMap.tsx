@@ -1,5 +1,6 @@
 import { SearchIcon } from '@/components/icons/SearchIcon';
-import { Colors, FontFamily, Radius } from '@/constants/theme';
+import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
+import { TourColors, TourTypography } from '@/constants/tourTheme';
 import type { TourCategory } from '@/types/tour';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CheckerPlaceholder } from './CheckerPlaceholder';
@@ -121,11 +122,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: Radius.full,
     backgroundColor: Colors.gray.gray00,
-    boxShadow: '0 2px 8px rgba(38, 38, 38, 0.08)',
+    boxShadow: TourColors.searchShadow,
   },
   searchPlaceholder: {
     color: Colors.gray.gray60,
-    fontSize: 14,
+    fontSize: FontSize.sm,
     fontFamily: FontFamily.regular,
   },
   markerPosition: {
@@ -153,12 +154,12 @@ const styles = StyleSheet.create({
   },
   markerText: {
     color: Colors.pink.pink40,
-    fontSize: 9,
+    fontSize: TourTypography.marker,
     fontFamily: FontFamily.bold,
   },
   selectedMarkerText: {
     color: Colors.gray.gray00,
-    fontSize: 12,
+    fontSize: FontSize.xs,
   },
   markerTail: {
     width: 8,
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: Radius.full,
-    backgroundColor: 'rgba(53, 139, 255, 0.16)',
+    backgroundColor: TourColors.locationPulse,
   },
   currentLocationDot: {
     width: 16,
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: Colors.gray.gray00,
     borderRadius: Radius.full,
-    backgroundColor: '#358BFF',
+    backgroundColor: TourColors.location,
   },
   locationButton: {
     position: 'absolute',
@@ -206,6 +207,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: Radius.full,
     backgroundColor: Colors.gray.gray00,
-    boxShadow: '0 2px 8px rgba(38, 38, 38, 0.14)',
+    boxShadow: TourColors.locationShadow,
   },
 });

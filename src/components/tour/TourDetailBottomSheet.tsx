@@ -1,9 +1,10 @@
+import { AlertModal } from '@/components/common/AlertModal';
 import { DojangTourButton } from '@/components/common/DojangTourButton';
 import { LocationIcon } from '@/components/icons/LocationIcon';
 import { PhoneIcon } from '@/components/icons/PhoneIcon';
 import { WebIcon } from '@/components/icons/WebIcon';
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
-import { TourColors } from '@/constants/tourTheme';
+import { TourColors, TourTypography } from '@/constants/tourTheme';
 import type { TourAttraction } from '@/types/tour';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -18,7 +19,6 @@ import {
 } from 'react-native';
 import { CheckerPlaceholder } from './CheckerPlaceholder';
 import { CloseIcon } from './TourIcons';
-import { TourVisitConfirmModal } from './TourVisitConfirmModal';
 
 type Props = {
   attraction: TourAttraction;
@@ -138,8 +138,13 @@ export function TourDetailBottomSheet({
         </View>
       </Animated.View>
 
-      <TourVisitConfirmModal
+      <AlertModal
         visible={confirmVisible}
+        title="이 관광지를 방문할까요?"
+        description={'7시간 이내에 도착하면\n도장을 획득합니다.'}
+        cancelText="취소"
+        confirmText="방문"
+        confirmTextColor={Colors.pink.pink50}
         onClose={() => setConfirmVisible(false)}
         onConfirm={handleVisit}
       />
@@ -176,7 +181,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     backgroundColor: Colors.gray.gray00,
-    boxShadow: '0 -2px 10px rgba(38, 38, 38, 0.06)',
+    boxShadow: TourColors.sheetShadow,
   },
   handleArea: {
     height: 28,
@@ -199,8 +204,8 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     color: Colors.gray.gray100,
-    fontSize: 18,
-    lineHeight: 27,
+    fontSize: TourTypography.title,
+    lineHeight: TourTypography.title * 1.5,
     fontFamily: FontFamily.semiBold,
   },
   content: {
@@ -235,11 +240,11 @@ const styles = StyleSheet.create({
     flex: 1,
     color: Colors.gray.gray100,
     fontSize: FontSize.sm,
-    lineHeight: 21,
+    lineHeight: FontSize.sm * 1.5,
     fontFamily: FontFamily.regular,
   },
   linkText: {
-    color: '#2E78BC',
+    color: TourColors.link,
     textDecorationLine: 'underline',
   },
   buttonArea: {
@@ -251,6 +256,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 20,
     backgroundColor: Colors.gray.gray00,
-    boxShadow: '0 -2px 8px rgba(38, 38, 38, 0.04)',
+    boxShadow: TourColors.buttonAreaShadow,
   },
 });
