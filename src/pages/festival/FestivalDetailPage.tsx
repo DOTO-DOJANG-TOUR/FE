@@ -1,4 +1,5 @@
 import { getFestivalDetail, getFestivalDojangTourStatus } from '@/apis/festival';
+import { startStampTour, stopStampTour } from '@/apis/stamp';
 import DefaultFestivalImage from '@/assets/images/festival/common/card-dim-3.png';
 import { AlertModal } from '@/components/common/AlertModal';
 import { DojangTourButton } from '@/components/common/DojangTourButton';
@@ -95,16 +96,43 @@ export default function FestivalDetailPage({
 
     const homeLink = festival.homepageUrl;
 
-    const handleDojangButtonPress = () => {
+    const handleDojangButtonPress = async () => {
+        if (dojangStatus === 'start') {
+            try {
+                await startStampTour(festivalId);
+
+                const data = await getFestivalDojangTourStatus(festivalId);
+
+                setDojangStatus(
+                    mapDojangTourStatus(data.status),
+                );
+            } catch (error) {
+                console.error('스탬프 투어 시작 실패:', error);
+            }
+
+            return;
+        }
+
         if (dojangStatus === 'stop') {
             setIsStopModalVisible(true);
         }
     };
 
-    const handleStopTour = () => {
-        // 도장 투어 중단 API 호출 예정
+    const handleStopTour = async () => {
+        try {
+            await stopStampTour(festivalId);
 
-        setIsStopModalVisible(false);
+            const data =
+                await getFestivalDojangTourStatus(festivalId);
+
+            setDojangStatus(
+                mapDojangTourStatus(data.status),
+            );
+
+            setIsStopModalVisible(false);
+        } catch (error) {
+            console.error('스탬프 투어 중단 실패:', error);
+        }
     };
 
     return (
@@ -270,6 +298,8 @@ export default function FestivalDetailPage({
                 visible={isStopModalVisible}
                 title="투어를 중단하시겠습니까?"
                 description="지금까지 수집한 도장이 모두 소멸됩니다."
+                cancelText='취소'
+                confirmText='중단'
                 onClose={() => setIsStopModalVisible(false)}
                 onConfirm={handleStopTour}
             />

@@ -5,6 +5,8 @@ type Props = {
   visible: boolean;
   title: string;
   description: string;
+  cancelText?: string;
+  confirmText: string;
   onClose: () => void;
   onConfirm: () => void;
 };
@@ -13,6 +15,8 @@ export const AlertModal = ({
   visible,
   title,
   description,
+  cancelText,
+  confirmText,
   onClose,
   onConfirm,
 }: Props) => {
@@ -29,18 +33,20 @@ export const AlertModal = ({
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.description}>{description}</Text>
           <View style={styles.buttonContainer}>
-            <Pressable
-              style={styles.button}
-              onPress={onClose}
-            >
-              <Text style={styles.cancelButtonText}>취소</Text>
-            </Pressable>
+            {cancelText &&
+              <Pressable
+                style={styles.button}
+                onPress={onClose}
+              >
+                <Text style={styles.cancelButtonText}>{cancelText}</Text>
+              </Pressable>
+            }
 
             <Pressable
               style={styles.button}
               onPress={onConfirm}
             >
-              <Text style={styles.stopButtonText}>중단</Text>
+              <Text style={styles.stopButtonText}>{confirmText}</Text>
             </Pressable>
           </View>
         </View>
