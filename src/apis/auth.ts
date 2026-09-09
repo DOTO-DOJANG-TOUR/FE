@@ -11,13 +11,13 @@ export function signInWithSocialToken(provider: SocialProvider, idToken: string)
   });
 }
 
-export async function signOutFromServer() {
-  const refreshToken = await getToken(TOKEN_KEYS.REFRESH_TOKEN);
-  if (!refreshToken) return;
+export async function signOutFromServer(refreshToken?: string | null) {
+  const token = refreshToken ?? await getToken(TOKEN_KEYS.REFRESH_TOKEN);
+  if (!token) return;
 
   await apiFetch<void>('/api/v1/auth/sign-out', {
     method: 'POST',
-    body: JSON.stringify({ refreshToken }),
+    body: JSON.stringify({ refreshToken: token }),
     skipAuth: true,
     skipRefresh: true,
   });
