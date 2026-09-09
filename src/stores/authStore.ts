@@ -81,12 +81,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
-    // 서버 요청에 문제가 있어도 사용자는 바로 로그인 화면으로 이동해야 한다.
-    const refreshToken = await getToken(TOKEN_KEYS.REFRESH_TOKEN);
-    const signOutRequest = signOutFromServer(refreshToken).catch(() => undefined);
-
-    await clearAuthStorage();
+    // 서버·저장소 정리 실패와 관계없이 사용자는 즉시 로그인 화면으로 이동해야 한다.
     set({ status: 'unauthenticated', user: null });
-    void signOutRequest;
+
+    void (async () => {
+      const refreshToken = await getToken(TOKEN_KEYS.REFRESH_TOKEN).catch(() => null);
+      const cleanupTasks = [clearAuthStorage()];
+
+      if (refreshToken) cleanupTasks.push(signOutFromServer(refreshToken));
+
+      await Promise.allSettled(cleanupTasks);
+    })();
   },
 }));
