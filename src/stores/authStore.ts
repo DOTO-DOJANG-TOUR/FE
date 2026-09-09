@@ -81,11 +81,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
-    try {
-      await signOutFromServer();
-    } finally {
-      await clearAuthStorage();
-      set({ status: 'unauthenticated', user: null });
-    }
+    // 서버 요청에 문제가 있어도 사용자는 바로 로그인 화면으로 이동해야 한다.
+    const refreshToken = await getToken(TOKEN_KEYS.REFRESH_TOKEN);
+    const signOutRequest = signOutFromServer(refreshToken).catch(() => undefined);
+
+    await clearAuthStorage();
+    set({ status: 'unauthenticated', user: null });
+    void signOutRequest;
   },
 }));
