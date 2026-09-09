@@ -1,4 +1,3 @@
-import { ApiResponse } from "@/types/api";
 import { FestivalContent, FestivalListResult } from "@/types/festival";
 import { TourContent } from "@/types/tour";
 import { apiFetch } from "./client";
@@ -15,13 +14,11 @@ export const searchFestivals = async (
     params.append('cursor', cursor);
   }
 
-  const response = await apiFetch<
-    ApiResponse<FestivalListResult<FestivalContent>>
-  >(
+  const response = await apiFetch<FestivalListResult<FestivalContent>>(
     `/api/v1/festival?${params.toString()}`
   );
 
-  return response.result;
+  return response;
 };
 
 export const searchTours = async (
@@ -32,11 +29,9 @@ export const searchTours = async (
     keyword,
   });
 
-  const response = await apiFetch<
-    ApiResponse<TourContent[]>
-  >(
+  const response = await apiFetch<TourContent[]>(
     `/api/v1/festival/${festivalId}/tour-spots?${params.toString()}`
   );
 
-  return response.result;
+  return response;
 };

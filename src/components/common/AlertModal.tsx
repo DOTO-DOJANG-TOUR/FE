@@ -5,6 +5,9 @@ type Props = {
   visible: boolean;
   title: string;
   description: string;
+  cancelText?: string;
+  confirmText: string;
+  confirmTextColor?: string;
   onClose: () => void;
   onConfirm: () => void;
 };
@@ -13,6 +16,9 @@ export const AlertModal = ({
   visible,
   title,
   description,
+  cancelText,
+  confirmText,
+  confirmTextColor = '#FF4032',
   onClose,
   onConfirm,
 }: Props) => {
@@ -29,18 +35,23 @@ export const AlertModal = ({
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.description}>{description}</Text>
           <View style={styles.buttonContainer}>
-            <Pressable
-              style={styles.button}
-              onPress={onClose}
-            >
-              <Text style={styles.cancelButtonText}>취소</Text>
-            </Pressable>
+            {cancelText &&
+              <Pressable
+                style={styles.button}
+                onPress={onClose}
+              >
+                <Text style={styles.cancelButtonText}>{cancelText}</Text>
+              </Pressable>
+            }
 
             <Pressable
               style={styles.button}
               onPress={onConfirm}
             >
-              <Text style={styles.stopButtonText}>중단</Text>
+              <Text style={[
+                styles.confirmButtonText,
+                { color: confirmTextColor },
+              ]}>{confirmText}</Text>
             </Pressable>
           </View>
         </View>
@@ -95,8 +106,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.medium,
     lineHeight: FontSize.sm * 1.5,
   },
-  stopButtonText: {
-    color: '#FF4032',
+  confirmButtonText: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.medium,
     lineHeight: FontSize.sm * 1.5,
