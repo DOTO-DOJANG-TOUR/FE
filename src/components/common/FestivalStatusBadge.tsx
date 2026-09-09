@@ -5,6 +5,9 @@ type FestivalStatus = 'upcoming' | 'ongoing' | 'ended';
 
 type Props = {
     status: FestivalStatus;
+    paddingHorizontal?: number;
+    paddingVertical?: number;
+    fontSize?: number;
 };
 
 const statusConfig = {
@@ -25,12 +28,24 @@ const statusConfig = {
     },
 };
 
-export const FestivalStatusBadge = ({ status }: Props) => {
+export const FestivalStatusBadge = ({
+    status,
+    paddingHorizontal = Spacing.two,
+    paddingVertical = 3,
+    fontSize = FontSize.xs,
+}: Props) => {
     const config = statusConfig[status];
 
     return (
-        <View style={[styles.badge, { backgroundColor: config.backgroundColor }]}>
-            <Text style={[styles.text, { color: config.textColor }]}>
+        <View style={[styles.badge, {
+            backgroundColor: config.backgroundColor,
+            paddingHorizontal,
+            paddingVertical,
+        }]}>
+            <Text style={[styles.text, {
+                color: config.textColor,
+                fontSize,
+            }]}>
                 {config.label}
             </Text>
         </View>
@@ -39,14 +54,11 @@ export const FestivalStatusBadge = ({ status }: Props) => {
 
 const styles = StyleSheet.create({
     badge: {
-        paddingHorizontal: Spacing.two,
-        paddingVertical: 3,
         borderRadius: Radius.sm,
         alignSelf: 'flex-start',
     },
 
     text: {
-        fontSize: FontSize.xs,
         fontFamily: FontFamily.semiBold,
     }
 });

@@ -8,7 +8,7 @@ const ACTIVE_COLOR = Colors.pink.pink50;
 const INACTIVE_COLOR = Colors.gray.gray70;
 
 const tabConfig = {
-  index: {
+  festival: {
     label: '축제',
     Icon: FestivalNaviIcon,
   },

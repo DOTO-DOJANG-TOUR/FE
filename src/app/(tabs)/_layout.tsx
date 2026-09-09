@@ -11,7 +11,7 @@ export default function TabLayout() {
       tabBar={(props) => <BottomNavigation {...props} />}
     >
       <Tabs.Screen
-        name="index"
+        name="festival"
         options={{
           title: '축제',
         }}
