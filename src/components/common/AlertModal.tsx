@@ -7,6 +7,7 @@ type Props = {
   description: string;
   cancelText?: string;
   confirmText: string;
+  confirmTextColor?: string;
   onClose: () => void;
   onConfirm: () => void;
 };
@@ -17,6 +18,7 @@ export const AlertModal = ({
   description,
   cancelText,
   confirmText,
+  confirmTextColor = '#FF4032',
   onClose,
   onConfirm,
 }: Props) => {
@@ -46,7 +48,10 @@ export const AlertModal = ({
               style={styles.button}
               onPress={onConfirm}
             >
-              <Text style={styles.stopButtonText}>{confirmText}</Text>
+              <Text style={[
+                styles.confirmButtonText,
+                { color: confirmTextColor },
+              ]}>{confirmText}</Text>
             </Pressable>
           </View>
         </View>
@@ -101,8 +106,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.medium,
     lineHeight: FontSize.sm * 1.5,
   },
-  stopButtonText: {
-    color: '#FF4032',
+  confirmButtonText: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.medium,
     lineHeight: FontSize.sm * 1.5,
