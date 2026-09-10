@@ -28,6 +28,19 @@ export type MyTourStamp = {
   status: DojangTourStatus;
 }
 
+export type StampDetailItem = {
+  stampId: string;
+};
+
+export type MyTourStampDetail = {
+  festivalId: string;
+  festivalImgUrl: string;
+  tourName: string;
+  stampCount: number;
+  stamps: StampDetailItem[];
+  status: DojangTourStatus;
+}
+
 export type TourStampListResult = {
   rewardedTourCount: number;
   tours: MyTourStamp[];

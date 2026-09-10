@@ -4,11 +4,20 @@ import { StyleSheet, Text, View } from 'react-native';
 type Props = {
     subtitle?: string,
     title?: string,
+    paddingTop?: number;
 }
 
-export default function FestivalMainTitle({ subtitle, title }: Props) {
+export default function FestivalMainTitle({
+    subtitle,
+    title,
+    paddingTop = 30,
+}: Props) {
     return (
-        <View style={styles.container}>
+        <View style={[
+            styles.container, {
+                paddingTop
+            }
+        ]}>
             {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
             {title && <Text style={styles.title}>{title}</Text>}
         </View>
@@ -17,7 +26,6 @@ export default function FestivalMainTitle({ subtitle, title }: Props) {
 
 const styles = StyleSheet.create({
     container: {
-        paddingTop: 30,
         paddingHorizontal: 20,
     },
     subtitle: {
