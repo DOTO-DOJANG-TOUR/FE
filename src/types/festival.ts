@@ -9,6 +9,9 @@ type FestivalCategoryCode =
 export type DojangTourButtonStatus =
   | 'start'
   | 'stop'
+  | 'stillProgress'
+  | 'getReward'
+  | 'alreadyRewarded'
   | 'visitAndStamp'
   | 'alreadyVisited'
   | 'alreadyJoinedTour'
