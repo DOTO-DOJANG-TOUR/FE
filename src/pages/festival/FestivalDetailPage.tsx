@@ -166,7 +166,11 @@ export default function FestivalDetailPage({
                     styles.introSection
                 ]}>
                     <View style={styles.titleBox}>
-                        <Text style={styles.title}>{festival.title}</Text>
+                        <Text
+                            style={styles.title}
+                            numberOfLines={1}
+                            ellipsizeMode='tail'
+                        >{festival.title}</Text>
                         <View style={styles.badgeBox}>
                             <FestivalStatusBadge
                                 status={festival.status}
@@ -297,7 +301,7 @@ export default function FestivalDetailPage({
             <AlertModal
                 visible={isStopModalVisible}
                 title="투어를 중단하시겠습니까?"
-                description="지금까지 수집한 도장이 모두 소멸됩니다."
+                description="지금까지 획득한 도장이 모두 소멸됩니다."
                 cancelText='취소'
                 confirmText='중단'
                 onClose={() => setIsStopModalVisible(false)}
@@ -416,5 +420,6 @@ const styles = StyleSheet.create({
     dojangSection: {
         paddingHorizontal: 20,
         paddingTop: 14,
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.10)',
     },
 });
