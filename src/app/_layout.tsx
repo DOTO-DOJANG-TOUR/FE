@@ -23,7 +23,11 @@ export default function RootLayout() {
   });
 
   const colorScheme = useColorScheme();
-  const status = useAuthStore((state) => state.status);
+  const storedStatus = useAuthStore((state) => state.status);
+  const status = storedStatus;
+  // [LOCAL-DEMO ONLY] 가상폰 시연이 필요할 때만 위 줄을 주석 처리하고,
+  // 아래 줄의 주석을 해제한다. 이 우회는 인증 여부와 무관하게 탭 화면을 열므로 커밋하면 안 된다.
+  // const status = __DEV__ ? 'authenticated' : storedStatus;
   const initialize = useAuthStore((state) => state.initialize);
   const initializedRef = useRef(false);
   const [minimumSplashElapsed, setMinimumSplashElapsed] = useState(false);
@@ -65,7 +69,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="festival-detail" />
           <Stack.Screen name="festival-search" />
-          <Stack.Screen name="tour-search" />
+          <Stack.Screen name="search" />
           <Stack.Screen name="visit" />
         </Stack.Protected>
       </Stack>

@@ -1,6 +1,6 @@
 import { DojangTourStatus } from "./festival";
 
-type FestivalCategoryCode =
+export type TourCategoryCode =
   | 'EV010100'
   | 'EV010200'
   | 'EV010300'
@@ -31,4 +31,19 @@ export type MyTourStamp = {
 export type TourStampListResult = {
   rewardedTourCount: number;
   tours: MyTourStamp[];
+};
+
+export type TourFilterCategory = 'menu' | 'culture' | 'history' | 'nature' | 'experience';
+export type TourCategory = Exclude<TourFilterCategory, 'menu'>;
+
+export type TourAttraction = {
+  id: string;
+  title: string;
+  distance: string;
+  address: string;
+  phone: string;
+  homepage: string;
+  category: TourCategory;
+  imageCount: number;
+  visited?: boolean;
 };
