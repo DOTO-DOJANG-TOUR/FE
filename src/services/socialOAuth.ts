@@ -60,7 +60,6 @@ async function requestGoogleIdToken() {
 
   try {
     const webClientId = getGoogleWebClientId();
-    console.log('[GoogleSignIn] webClientId =', webClientId);
 
     GoogleSignin.configure({
       webClientId,
@@ -80,8 +79,6 @@ async function requestGoogleIdToken() {
 
     return response.data.idToken;
   } catch (error) {
-    console.log('[GoogleSignIn] raw error =', JSON.stringify(error, Object.getOwnPropertyNames(error as object)));
-    console.log('[GoogleSignIn] raw error object =', error);
     if (error instanceof SocialAuthError) throw error;
     throw new SocialAuthError(getGoogleErrorMessage(error));
   }
