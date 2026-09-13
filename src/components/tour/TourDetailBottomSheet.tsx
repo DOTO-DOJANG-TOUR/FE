@@ -9,6 +9,7 @@ import type { TourAttraction } from '@/types/tour';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Animated,
+  Image,
   PanResponder,
   Pressable,
   ScrollView,
@@ -111,21 +112,25 @@ export function TourDetailBottomSheet({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.photoRow}
             >
-              {Array.from({ length: attraction.imageCount }).map((_, index) => (
-                <CheckerPlaceholder
-                  key={`${attraction.id}-${index}`}
-                  columns={4}
-                  rows={4}
-                  rounded
-                  style={styles.photo}
-                />
-              ))}
+              {attraction.imageUrls.length > 0 ? (
+                attraction.imageUrls.map((imageUrl, index) => (
+                  <Image
+                    key={`${attraction.id}-${index}`}
+                    source={{ uri: imageUrl }}
+                    style={[styles.photo, styles.photoRounded]}
+                  />
+                ))
+              ) : (
+                <CheckerPlaceholder columns={4} rows={4} rounded style={styles.photo} />
+              )}
             </ScrollView>
 
             <View style={styles.infoGroup}>
               <InfoRow icon={<LocationIcon />} text={attraction.address} />
-              <InfoRow icon={<PhoneIcon />} text={attraction.phone} />
-              <InfoRow icon={<WebIcon />} text={attraction.homepage} isLink />
+              {attraction.phone && <InfoRow icon={<PhoneIcon />} text={attraction.phone} />}
+              {attraction.homepage && (
+                <InfoRow icon={<WebIcon />} text={attraction.homepage} isLink />
+              )}
             </View>
           </ScrollView>
         )}
@@ -219,6 +224,9 @@ const styles = StyleSheet.create({
   photo: {
     width: 116,
     height: 116,
+  },
+  photoRounded: {
+    borderRadius: Radius.md,
   },
   infoGroup: {
     gap: 14,

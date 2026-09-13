@@ -1,7 +1,7 @@
 import { CategoryBadge } from '@/components/common/CategoryBadge';
-import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import type { TourAttraction } from '@/types/tour';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CheckerPlaceholder } from './CheckerPlaceholder';
 
 type Props = {
@@ -17,14 +17,19 @@ export function TourAttractionCard({ attraction, onPress }: Props) {
       style={styles.card}
       onPress={onPress}
     >
-      <CheckerPlaceholder columns={4} rows={4} rounded style={styles.image} />
+      {attraction.imageUrls[0] ? (
+        <Image source={{ uri: attraction.imageUrls[0] }} style={[styles.image, styles.imageRounded]} />
+      ) : (
+        <CheckerPlaceholder columns={4} rows={4} rounded style={styles.image} />
+      )}
       <View style={styles.content}>
         <View>
           <Text numberOfLines={1} style={styles.title}>
             {attraction.title}
           </Text>
           <Text numberOfLines={1} style={styles.subtitle}>
-            {attraction.distance} · {attraction.address}
+            {attraction.distance ? `${attraction.distance} · ` : ''}
+            {attraction.address}
           </Text>
         </View>
         <CategoryBadge category={attraction.category} />
@@ -42,6 +47,9 @@ const styles = StyleSheet.create({
   image: {
     width: 140,
     height: 140,
+  },
+  imageRounded: {
+    borderRadius: Radius.md,
   },
   content: {
     flex: 1,
