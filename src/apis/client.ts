@@ -5,9 +5,25 @@ import {
   setToken,
   TOKEN_KEYS,
 } from '@/utils/secureStore';
+import NetInfo from '@react-native-community/netinfo';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
 const DEFAULT_TIMEOUT_MS = 10000;
+
+export class NetworkOfflineError extends Error {
+  constructor() {
+    super('오프라인 상태입니다.');
+    this.name = 'NetworkOfflineError';
+  }
+}
+
+// 기기가 오프라인이면 API 요청 자체를 보내지 않고 즉시 실패시킨다.
+async function assertOnline() {
+  const state = await NetInfo.fetch();
+  if (state.isConnected === false) {
+    throw new NetworkOfflineError();
+  }
+}
 
 type ApiFetchOptions = RequestInit & {
   skipAuth?: boolean;
@@ -94,6 +110,8 @@ export async function refreshAuthSession(): Promise<AuthSession> {
     const refreshToken = await getToken(TOKEN_KEYS.REFRESH_TOKEN);
     if (!refreshToken) throw new ApiError('로그인이 필요합니다.', 401);
 
+    await assertOnline();
+
     const response = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
       method: 'POST',
       signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
@@ -137,6 +155,8 @@ export async function apiFetch<T>(
   if (!BASE_URL) {
     throw new Error('EXPO_PUBLIC_API_BASE_URL이 설정되지 않았습니다. .env를 확인하세요.');
   }
+
+  await assertOnline();
 
   const accessToken = skipAuth ? null : await getToken(TOKEN_KEYS.ACCESS_TOKEN);
   const response = await fetch(`${BASE_URL}${path}`, {

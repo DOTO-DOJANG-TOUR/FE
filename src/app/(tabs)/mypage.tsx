@@ -1,9 +1,10 @@
 import { getMyProfile, updateMyNickname, withdrawMembership } from '@/apis/members';
 import { AlertModal } from '@/components/common/AlertModal';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { DotoBrandIcon, EditIcon } from '@/components/icons';
 import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
-import { ApiError } from '@/apis/client';
+import { ApiError, NetworkOfflineError } from '@/apis/client';
 import type { Member } from '@/types/auth';
 import { useEffect, useState } from 'react';
 import {
@@ -21,6 +22,13 @@ const POLICY_ITEMS = ['이용 약관', '개인정보 취급방침'];
 const NICKNAME_MIN_LENGTH = 2;
 const NICKNAME_MAX_LENGTH = 30;
 
+// 4xx(닉네임 검증, 사용자 없음 등)는 같은 요청을 재시도해도 결과가 바뀌지 않으므로
+// 서버가 내려준 메시지를 그대로 보여준다. 그 외(오프라인/5xx/타임아웃)만 재시도 대상이다.
+function isRetryableError(error: unknown) {
+  if (error instanceof ApiError) return error.status >= 500;
+  return true;
+}
+
 export default function MyPageScreen() {
   const authUser = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
@@ -28,7 +36,7 @@ export default function MyPageScreen() {
 
   const [member, setMember] = useState<Member | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadTrigger, setReloadTrigger] = useState(0);
 
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState('');
@@ -37,9 +45,14 @@ export default function MyPageScreen() {
 
   const [isWithdrawalModalVisible, setIsWithdrawalModalVisible] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
-  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
 
-  const [reloadTrigger, setReloadTrigger] = useState(0);
+  // 서버가 내려준 4xx 메시지를 그대로 보여주는 용도(재시도 대상 아님)
+  const [infoError, setInfoError] = useState<string | null>(null);
+  // 재시도 버튼을 누르면 실패했던 요청을 그대로 다시 실행한다(오프라인/5xx/타임아웃 등).
+  const [failedRequest, setFailedRequest] = useState<{
+    retry: () => void;
+    isOffline: boolean;
+  } | null>(null);
 
   const nickname = member?.nickname ?? authUser?.nickname ?? '';
 
@@ -49,17 +62,21 @@ export default function MyPageScreen() {
     const fetchProfile = async () => {
       try {
         setIsLoading(true);
-        setLoadError(null);
         const result = await getMyProfile();
         if (isMounted) setMember(result);
       } catch (error) {
         console.error('내 정보 조회 실패:', error);
         if (isMounted) {
-          setLoadError(
-            error instanceof ApiError
-              ? error.message
-              : '정보를 불러오지 못했어요.',
-          );
+          if (isRetryableError(error)) {
+            setFailedRequest({
+              retry: () => setReloadTrigger((prev) => prev + 1),
+              isOffline: error instanceof NetworkOfflineError,
+            });
+          } else {
+            setInfoError(
+              error instanceof ApiError ? error.message : '정보를 불러오지 못했어요.',
+            );
+          }
         }
       } finally {
         if (isMounted) setIsLoading(false);
@@ -102,9 +119,16 @@ export default function MyPageScreen() {
       setIsEditingNickname(false);
     } catch (error) {
       console.error('닉네임 수정 실패:', error);
-      setNicknameError(
-        error instanceof ApiError ? error.message : '닉네임 수정에 실패했어요.',
-      );
+      if (isRetryableError(error)) {
+        setFailedRequest({
+          retry: submitNickname,
+          isOffline: error instanceof NetworkOfflineError,
+        });
+      } else {
+        setNicknameError(
+          error instanceof ApiError ? error.message : '닉네임 수정에 실패했어요.',
+        );
+      }
     } finally {
       setIsSavingNickname(false);
     }
@@ -119,12 +143,25 @@ export default function MyPageScreen() {
     } catch (error) {
       console.error('회원탈퇴 실패:', error);
       setIsWithdrawalModalVisible(false);
-      setActionErrorMessage(
-        error instanceof ApiError ? error.message : '회원탈퇴에 실패했어요.',
-      );
+      if (isRetryableError(error)) {
+        setFailedRequest({
+          retry: confirmWithdrawal,
+          isOffline: error instanceof NetworkOfflineError,
+        });
+      } else {
+        setInfoError(
+          error instanceof ApiError ? error.message : '회원탈퇴에 실패했어요.',
+        );
+      }
     } finally {
       setIsWithdrawing(false);
     }
+  };
+
+  const retryFailedRequest = () => {
+    const request = failedRequest;
+    setFailedRequest(null);
+    request?.retry();
   };
 
   if (isLoading) {
@@ -132,22 +169,6 @@ export default function MyPageScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.centerContainer}>
           <ActivityIndicator color={Colors.pink.pink50} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.centerContainer}>
-          <Text style={styles.errorText}>{loadError}</Text>
-          <Pressable
-            style={styles.retryButton}
-            onPress={() => setReloadTrigger((prev) => prev + 1)}
-          >
-            <Text style={styles.retryButtonText}>다시 시도</Text>
-          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -247,13 +268,25 @@ export default function MyPageScreen() {
         onConfirm={confirmWithdrawal}
       />
 
+      <ErrorModal
+        visible={failedRequest !== null}
+        title={failedRequest?.isOffline ? '오프라인 상태예요' : undefined}
+        description={
+          failedRequest?.isOffline
+            ? '인터넷 연결을 확인한 후 다시 시도해 주세요.'
+            : undefined
+        }
+        onCancel={() => setFailedRequest(null)}
+        onRetry={retryFailedRequest}
+      />
+
       <AlertModal
-        visible={actionErrorMessage !== null}
+        visible={infoError !== null}
         title="오류"
-        description={actionErrorMessage ?? ''}
+        description={infoError ?? ''}
         confirmText="확인"
-        onClose={() => setActionErrorMessage(null)}
-        onConfirm={() => setActionErrorMessage(null)}
+        onClose={() => setInfoError(null)}
+        onConfirm={() => setInfoError(null)}
       />
     </SafeAreaView>
   );
@@ -273,26 +306,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-  },
-  errorText: {
-    color: Colors.gray.gray70,
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.sm,
-    lineHeight: FontSize.sm * 1.5,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: Colors.pink.pink50,
-  },
-  retryButtonText: {
-    color: Colors.gray.gray00,
-    fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.sm,
-    lineHeight: FontSize.sm * 1.5,
   },
   profileSection: {
     alignItems: 'center',
