@@ -1,30 +1,13 @@
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { StyleSheet, Text, View } from 'react-native';
 
-type FestivalCategoryCode =
-  | 'EV010100'
-  | 'EV010200'
-  | 'EV010300'
-  | 'EV010400'
-  | 'EV010500'
-  | 'EV010600';
-
+// 백엔드가 lclsSystem3 코드가 아니라 '문화관광' 같은 카테고리명을 그대로 내려주므로 변환 없이 표시한다
 type Props = {
-  category: FestivalCategoryCode;
+  category: string;
   paddingHorizontal?: number;
   paddingVertical?: number;
   fontSize?: number;
   fontFamily?: string;
-};
-
-// 6개 코드 밖의 값(오타, 신규 카테고리 등)에 대한 폴백 없음 — API 연동 시점에 실제 응답 형태 보고 다시 결정하기로 함(2026-08-18)
-const categoryLabel: Record<FestivalCategoryCode, string> = {
-  EV010100: '문화관광',
-  EV010200: '문화예술',
-  EV010300: '지역특산물',
-  EV010400: '전통역사',
-  EV010500: '생태자연',
-  EV010600: '기타',
 };
 
 export const FestivalCategoryBadge = ({
@@ -45,7 +28,7 @@ export const FestivalCategoryBadge = ({
         {
           fontSize,
           fontFamily,
-        }]}>{categoryLabel[category]}</Text>
+        }]}>{category}</Text>
     </View>
   );
 };
