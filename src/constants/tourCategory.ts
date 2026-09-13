@@ -18,9 +18,3 @@ export function mapTourCategory(category: string): TourCategory | null {
   return prefixMatch ? KOREAN_TO_TOUR_CATEGORY[prefixMatch] : null;
 }
 
-export const TOUR_CATEGORY_MARKER_LABEL: Record<TourCategory, string> = {
-  culture: '문',
-  history: '역',
-  nature: '자',
-  experience: '체',
-};
