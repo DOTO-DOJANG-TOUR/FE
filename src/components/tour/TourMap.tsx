@@ -1,5 +1,4 @@
 import { SearchIcon } from '@/components/icons/SearchIcon';
-import { TOUR_CATEGORY_MARKER_LABEL } from '@/constants/tourCategory';
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { TourColors } from '@/constants/tourTheme';
 import type { TourCategory } from '@/types/tour';
@@ -20,15 +19,18 @@ const KAKAO_JAVASCRIPT_KEY = process.env.EXPO_PUBLIC_KAKAO_JAVASCRIPT_KEY;
 const DEFAULT_MARKER_FOCUS_LEVEL = 3;
 
 export type TourMapMarker = {
+  // 클릭 시 이동할 대표 관광지 id(좌표가 겹치는 그룹이면 그중 첫 번째).
   id: string;
-  category: TourCategory;
+  // 이 좌표에 겹쳐있는 모든 관광지 id — 상세 화면에서 이 중 하나가 선택돼 있으면 마커가 선택 상태로 보인다.
+  memberIds: string[];
+  categories: TourCategory[];
   lat: number;
   lng: number;
 };
 
 export type TourMapHandle = {
   focusOnBounds: (points: { lat: number; lng: number }[]) => void;
-  focusOnMarker: (lat: number, lng: number, level?: number) => void;
+  focusOnMarker: (lat: number, lng: number, level?: number, animate?: boolean) => void;
   focusOnCurrentLocation: (lat: number, lng: number, level?: number) => void;
 };
 
@@ -76,8 +78,8 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
       if (points.length === 0) return;
       runInWebView(`window.__dotoMap.fitBounds(${JSON.stringify(points)});`);
     },
-    focusOnMarker: (lat, lng, level = DEFAULT_MARKER_FOCUS_LEVEL) => {
-      runInWebView(`window.__dotoMap.setCenter(${lat}, ${lng}, ${level});`);
+    focusOnMarker: (lat, lng, level = DEFAULT_MARKER_FOCUS_LEVEL, animate = true) => {
+      runInWebView(`window.__dotoMap.setCenter(${lat}, ${lng}, ${level}, ${animate});`);
     },
     focusOnCurrentLocation: (lat, lng, level) => {
       const levelArg = typeof level === 'number' ? level : 'undefined';
@@ -91,8 +93,8 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
         id: marker.id,
         lat: marker.lat,
         lng: marker.lng,
-        label: TOUR_CATEGORY_MARKER_LABEL[marker.category],
-        selected: marker.id === selectedMarkerId,
+        categories: marker.categories,
+        selected: !!selectedMarkerId && marker.memberIds.includes(selectedMarkerId),
       })),
     [markers, selectedMarkerId],
   );
