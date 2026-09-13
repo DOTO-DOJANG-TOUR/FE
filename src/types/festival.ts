@@ -1,11 +1,3 @@
-type FestivalCategoryCode =
-  | 'EV010100'
-  | 'EV010200'
-  | 'EV010300'
-  | 'EV010400'
-  | 'EV010500'
-  | 'EV010600';
-
 export type DojangTourButtonStatus =
   | 'start'
   | 'stop'
@@ -33,7 +25,7 @@ export type FestivalContent = {
   eventStartDate: string;
   eventEndDate: string;
   gunguName: string;
-  category: FestivalCategoryCode;
+  category: string;
 };
 
 export type FestivalDetail = {
