@@ -5,9 +5,25 @@ import {
   setToken,
   TOKEN_KEYS,
 } from '@/utils/secureStore';
+import NetInfo from '@react-native-community/netinfo';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
 const DEFAULT_TIMEOUT_MS = 10000;
+
+export class NetworkOfflineError extends Error {
+  constructor() {
+    super('오프라인 상태입니다.');
+    this.name = 'NetworkOfflineError';
+  }
+}
+
+// 기기가 오프라인이면 API 요청 자체를 보내지 않고 즉시 실패시킨다.
+async function assertOnline() {
+  const state = await NetInfo.fetch();
+  if (state.isConnected === false) {
+    throw new NetworkOfflineError();
+  }
+}
 
 type ApiFetchOptions = RequestInit & {
   skipAuth?: boolean;
@@ -25,6 +41,13 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+// 4xx(인증 거부 등)는 같은 요청을 재시도해도 결과가 바뀌지 않는 확정된 실패다.
+// 그 외(오프라인/5xx/타임아웃)는 일시적인 문제이므로 재시도 대상으로 본다.
+export function isRetryableError(error: unknown) {
+  if (error instanceof ApiError) return error.status >= 500;
+  return true;
 }
 
 let refreshPromise: Promise<AuthSession> | null = null;
@@ -94,6 +117,8 @@ export async function refreshAuthSession(): Promise<AuthSession> {
     const refreshToken = await getToken(TOKEN_KEYS.REFRESH_TOKEN);
     if (!refreshToken) throw new ApiError('로그인이 필요합니다.', 401);
 
+    await assertOnline();
+
     const response = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
       method: 'POST',
       signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
@@ -120,7 +145,11 @@ export async function refreshAuthSession(): Promise<AuthSession> {
     return session;
   })()
     .catch(async (error) => {
-      await expireSession();
+      // 오프라인/서버 오류 등 일시적인 문제로 갱신이 실패한 것뿐이라면 세션을 유지한다.
+      // 재발급 자체가 거부된 경우(리프레시 토큰 무효/만료 등)에만 로그아웃 처리한다.
+      if (!isRetryableError(error)) {
+        await expireSession();
+      }
       throw error;
     })
     .finally(() => {
@@ -137,6 +166,8 @@ export async function apiFetch<T>(
   if (!BASE_URL) {
     throw new Error('EXPO_PUBLIC_API_BASE_URL이 설정되지 않았습니다. .env를 확인하세요.');
   }
+
+  await assertOnline();
 
   const accessToken = skipAuth ? null : await getToken(TOKEN_KEYS.ACCESS_TOKEN);
   const response = await fetch(`${BASE_URL}${path}`, {
