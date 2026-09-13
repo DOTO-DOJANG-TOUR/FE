@@ -10,7 +10,12 @@ const KOREAN_TO_TOUR_CATEGORY: Record<string, TourCategory> = {
 };
 
 export function mapTourCategory(category: string): TourCategory | null {
-  return KOREAN_TO_TOUR_CATEGORY[category] ?? null;
+  if (KOREAN_TO_TOUR_CATEGORY[category]) return KOREAN_TO_TOUR_CATEGORY[category];
+
+  // GET /api/v1/stamp-tour 스웨거 예시엔 "자연관광지"처럼 접미사가 붙은 값이 있어서(다른 엔드포인트의
+  // "자연" enum과 불일치) 접두사 일치도 같이 봐준다. 실제 값이 어느 쪽이든 안전하게 동작하도록 방어.
+  const prefixMatch = Object.keys(KOREAN_TO_TOUR_CATEGORY).find((key) => category.startsWith(key));
+  return prefixMatch ? KOREAN_TO_TOUR_CATEGORY[prefixMatch] : null;
 }
 
 export const TOUR_CATEGORY_MARKER_LABEL: Record<TourCategory, string> = {

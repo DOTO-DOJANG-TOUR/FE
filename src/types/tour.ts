@@ -18,6 +18,15 @@ export type TourSpotDetail = TourContent & {
   apiModifiedAt: string;
 };
 
+// GET /api/v1/stamp-tour 응답. tourSpots는 축제 위치 기준 거리순으로 내려오고
+// 각 항목의 distance는 백엔드가 이미 "1.2km"/"850m" 형태로 포맷해서 준다.
+export type StampTourDetail = {
+  festivalId: string;
+  title: string;
+  stampCount: number;
+  tourSpots: TourContent[];
+};
+
 export type TourFilterCategory = 'menu' | 'culture' | 'history' | 'nature' | 'experience';
 export type TourCategory = Exclude<TourFilterCategory, 'menu'>;
 
