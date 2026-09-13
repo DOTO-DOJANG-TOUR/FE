@@ -6,10 +6,11 @@ import { requestSocialIdToken } from '@/services/socialOAuth';
 import { useAuthStore } from '@/stores/authStore';
 import type { SocialProvider } from '@/types/auth';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
+  const { height: windowHeight } = useWindowDimensions();
   const completeSignIn = useAuthStore((state) => state.completeSignIn);
   const [loadingProvider, setLoadingProvider] = useState<SocialProvider | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -33,7 +34,12 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <View style={styles.container}>
+      <View
+        style={[
+          styles.container,
+          Platform.OS === 'web' && { height: Math.min(windowHeight, 852) },
+        ]}
+      >
         <View style={styles.hero}>
           <DotoBrandIcon />
           <Text style={styles.title}>
@@ -70,50 +76,56 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.gray.gray00,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Platform.select({ web: '#FAFAFA', default: Colors.gray.gray00 }),
   },
   container: {
     flex: 1,
     width: '100%',
     maxWidth: 393,
-    alignSelf: 'center',
     paddingHorizontal: 25,
     paddingBottom: 18,
+    backgroundColor: Colors.gray.gray00,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 4px 24px rgba(38, 38, 38, 0.10)',
+      },
+      default: {},
+    }),
   },
   hero: {
-    marginTop: 100,
+    marginTop: 180,
     alignItems: 'flex-start',
   },
   title: {
-    marginTop: 18,
+    marginTop: 8,
     color: Colors.gray.gray100,
     fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.xl,
-    lineHeight: 34,
-    letterSpacing: -0.6,
+    fontSize: 22,
+    lineHeight: 33,
   },
   highlight: {
     color: Colors.pink.pink50,
   },
   logo: {
-    // 로고용 타이포 크기는 본문 폰트 스케일과 달라 Figma 수치를 그대로 사용한다.
-    marginTop: 4,
-    color: Colors.gray.gray100,
+    marginTop: 8,
+    color: Colors.pink.pink50,
     fontFamily: FontFamily.bold,
-    fontSize: 50,
-    lineHeight: 60,
-    letterSpacing: -1.5,
+    fontSize: 36,
+    lineHeight: 37,
+    letterSpacing: -1.1,
   },
   description: {
-    marginTop: 8,
-    color: Colors.gray.gray70,
-    fontFamily: FontFamily.medium,
+    marginTop: 14,
+    color: '#777777',
+    fontFamily: FontFamily.regular,
     fontSize: FontSize.md,
     lineHeight: 24,
   },
   footer: {
     marginTop: 'auto',
-    gap: 12,
+    gap: 8,
   },
   error: {
     color: Colors.pink.pink50,

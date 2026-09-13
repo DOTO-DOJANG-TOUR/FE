@@ -1,5 +1,5 @@
 import { GoogleIcon, KakaoIcon } from '@/components/icons';
-import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
+import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import type { SocialProvider } from '@/types/auth';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -11,8 +11,8 @@ type Props = {
 };
 
 const labels: Record<SocialProvider, string> = {
-  GOOGLE: 'Google로 계속하기',
-  KAKAO: '카카오로 계속하기',
+  GOOGLE: 'Google 로그인',
+  KAKAO: '카카오 로그인',
 };
 
 export function SocialLoginButton({ provider, loading = false, disabled = false, onPress }: Props) {
@@ -44,9 +44,9 @@ export function SocialLoginButton({ provider, loading = false, disabled = false,
 
 const styles = StyleSheet.create({
   button: {
-    height: 52,
-    borderRadius: Radius.md,
-    paddingHorizontal: 18,
+    height: 48,
+    borderRadius: 8,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
