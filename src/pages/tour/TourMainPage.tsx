@@ -1,6 +1,5 @@
 import { isRetryableError, NetworkOfflineError } from '@/apis/client';
-import { getFestivalDetail } from '@/apis/festival';
-import { getTourSpots } from '@/apis/tour';
+import { getMyStampTour } from '@/apis/stamp';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { TOUR_SHEET_HEIGHT, TourBottomSheet } from '@/components/tour/TourBottomSheet';
@@ -9,24 +8,23 @@ import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { mapTourCategory } from '@/constants/tourCategory';
 import { TourColors, TourTypography } from '@/constants/tourTheme';
 import { useCurrentLocation } from '@/hooks/use-current-location';
-import type { TourAttraction, TourContent, TourFilterCategory } from '@/types/tour';
-import { distanceMeters, formatDistance, getCentroid, selectNearbySpots, type GeoPoint } from '@/utils/geo';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import type { StampTourDetail, TourAttraction, TourFilterCategory } from '@/types/tour';
+import { parseDistanceMeters, selectNearbySpots, type GeoPoint } from '@/utils/geo';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, StyleSheet, Text, View } from 'react-native';
 
 type AttractionWithPoint = { attraction: TourAttraction; point: GeoPoint };
 
 export default function TourMainPage() {
   const router = useRouter();
-  const { empty, festivalId } = useLocalSearchParams<{ empty?: string; festivalId?: string }>();
+  const { empty } = useLocalSearchParams<{ empty?: string }>();
 
   const [expanded, setExpanded] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<TourFilterCategory>('menu');
 
-  const [festivalTitle, setFestivalTitle] = useState('');
-  const [spots, setSpots] = useState<TourContent[]>([]);
-  const [isLoading, setIsLoading] = useState(() => !!festivalId);
+  const [stampTour, setStampTour] = useState<StampTourDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [reloadTrigger, setReloadTrigger] = useState(0);
   const [failedRequest, setFailedRequest] = useState<{
     retry: () => void;
@@ -42,104 +40,85 @@ export default function TourMainPage() {
     requestLocation,
   } = useCurrentLocation();
 
-  useEffect(() => {
-    if (!festivalId) return;
+  // 탭을 벗어났다 돌아와도(투어 시작/중단 직후 등) 최신 상태를 다시 받아오도록 마운트가 아닌
+  // 포커스 시점마다 조회한다 — 하단 탭은 화면이 유지된 채로 전환되기 때문에 마운트 1회로는 부족하다.
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
 
-    let isMounted = true;
-
-    const fetchTourData = async () => {
-      try {
-        setIsLoading(true);
-        const [festival, tourSpots] = await Promise.all([
-          getFestivalDetail(festivalId),
-          getTourSpots(festivalId),
-        ]);
-
-        if (isMounted) {
-          setFestivalTitle(festival.title);
-          setSpots(tourSpots);
+      const fetchStampTour = async () => {
+        try {
+          setIsLoading(true);
+          const result = await getMyStampTour();
+          if (isMounted) setStampTour(result);
+        } catch (error) {
+          console.error('스탬프 투어 조회 실패:', error);
+          if (isMounted && isRetryableError(error)) {
+            setFailedRequest({
+              retry: () => setReloadTrigger((prev) => prev + 1),
+              isOffline: error instanceof NetworkOfflineError,
+            });
+          }
+        } finally {
+          if (isMounted) setIsLoading(false);
         }
-      } catch (error) {
-        console.error('투어 데이터 조회 실패:', error);
-        if (isMounted && isRetryableError(error)) {
-          setFailedRequest({
-            retry: () => setReloadTrigger((prev) => prev + 1),
-            isOffline: error instanceof NetworkOfflineError,
-          });
-        }
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
+      };
 
-    fetchTourData();
+      fetchStampTour();
 
-    return () => {
-      isMounted = false;
-    };
-  }, [festivalId, reloadTrigger]);
+      return () => {
+        isMounted = false;
+      };
+      // reloadTrigger는 본문에서 읽지 않지만, 재시도 시 콜백 identity를 바꿔 포커스 상태에서도
+      // useFocusEffect가 다시 실행되게 하는 용도다(react-navigation 공식 패턴).
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [reloadTrigger]),
+  );
 
   useEffect(() => {
-    if (!festivalId) return;
     requestLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [festivalId]);
+  }, []);
 
   const locationDeniedVisible =
     locationPermission === 'denied' && !locationCanAskAgain && !locationDeniedDismissed;
 
-  // 축제 좌표를 내려주는 API가 없어(docs/OPEN_QUESTIONS.md "C" 참고) 관광지 전체의 중심(centroid)을
-  // 임시 기준점으로 쓴다. 백엔드가 축제 좌표를 추가해주면 이 값으로 교체한다.
-  const festivalCenter = useMemo(() => {
-    const points = spots
-      .map((spot) => ({ lat: Number(spot.mapY), lng: Number(spot.mapX) }))
-      .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+  const festivalId = stampTour?.festivalId;
 
-    return getCentroid(points);
-  }, [spots]);
-
+  // GET /api/v1/stamp-tour가 이미 축제 위치 기준 거리순으로 정렬해서 내려주므로, 여기선
+  // 10km 반경 필터링·5개 미만 시 자동 확장만 계산한다(distance 필드 재사용, #37).
   const nearbySpots = useMemo(() => {
-    if (!festivalCenter) return spots;
-
-    return selectNearbySpots(spots, festivalCenter, (spot) => ({
-      lat: Number(spot.mapY),
-      lng: Number(spot.mapX),
-    }));
-  }, [spots, festivalCenter]);
-
-  const attractionsWithPoint = useMemo<AttractionWithPoint[]>(() => {
-    const mapped = nearbySpots
-      .map((spot) => {
-        const category = mapTourCategory(spot.category);
-        const point: GeoPoint = { lat: Number(spot.mapY), lng: Number(spot.mapX) };
-
-        if (!category || !Number.isFinite(point.lat) || !Number.isFinite(point.lng)) {
-          return null;
-        }
-
-        const distance = userLocation
-          ? formatDistance(distanceMeters(userLocation, point))
-          : '';
-
-        const attraction: TourAttraction = {
-          id: spot.tourSpotId,
-          title: spot.title,
-          address: spot.address,
-          category,
-          distance,
-          imageUrls: spot.imageUrl ? [spot.imageUrl] : [],
-        };
-
-        return { attraction, point };
-      })
-      .filter((item): item is AttractionWithPoint => item !== null);
-
-    if (!userLocation) return mapped;
-
-    return [...mapped].sort(
-      (a, b) => distanceMeters(userLocation, a.point) - distanceMeters(userLocation, b.point),
+    if (!stampTour) return [];
+    return selectNearbySpots(stampTour.tourSpots, (spot) =>
+      parseDistanceMeters(spot.distance ?? ''),
     );
-  }, [nearbySpots, userLocation]);
+  }, [stampTour]);
+
+  const attractionsWithPoint = useMemo<AttractionWithPoint[]>(
+    () =>
+      nearbySpots
+        .map((spot) => {
+          const category = mapTourCategory(spot.category);
+          const point: GeoPoint = { lat: Number(spot.mapY), lng: Number(spot.mapX) };
+
+          if (!category || !Number.isFinite(point.lat) || !Number.isFinite(point.lng)) {
+            return null;
+          }
+
+          const attraction: TourAttraction = {
+            id: spot.tourSpotId,
+            title: spot.title,
+            address: spot.address,
+            category,
+            distance: spot.distance ?? '',
+            imageUrls: spot.imageUrl ? [spot.imageUrl] : [],
+          };
+
+          return { attraction, point };
+        })
+        .filter((item): item is AttractionWithPoint => item !== null),
+    [nearbySpots],
+  );
 
   const filteredItems = useMemo(
     () =>
@@ -187,7 +166,7 @@ export default function TourMainPage() {
     setLocationDeniedDismissed(false);
   };
 
-  if (empty === '1' || !festivalId) {
+  if (empty === '1' || (!isLoading && !stampTour)) {
     return (
       <View style={styles.noTourContainer}>
         <View style={styles.noTourIcon}>
@@ -201,7 +180,7 @@ export default function TourMainPage() {
 
   return (
     <View style={styles.container}>
-      {isLoading ? (
+      {isLoading || !stampTour ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={Colors.pink.pink50} />
         </View>
@@ -221,9 +200,8 @@ export default function TourMainPage() {
 
           <TourBottomSheet
             expanded={expanded}
-            title={festivalTitle}
-            // 진행 중인 도장 개수 API가 아직 없음(#48 방문 인증에서 확정 예정) — 우선 0으로 표시.
-            stampCount={0}
+            title={stampTour.title}
+            stampCount={stampTour.stampCount}
             selectedCategory={selectedCategory}
             attractions={attractions}
             onExpandedChange={setExpanded}

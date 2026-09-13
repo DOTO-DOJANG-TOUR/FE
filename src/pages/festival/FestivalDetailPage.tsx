@@ -106,6 +106,10 @@ export default function FestivalDetailPage({
                 setDojangStatus(
                     mapDojangTourStatus(data.status),
                 );
+
+                // GET /api/v1/stamp-tour가 festivalId 없이도 현재 진행 중인 투어를 내려주므로
+                // 파라미터 없이 이동해도 Tour 탭이 알아서 다시 조회한다.
+                router.push('/(tabs)/tour');
             } catch (error) {
                 console.error('스탬프 투어 시작 실패:', error);
             }
