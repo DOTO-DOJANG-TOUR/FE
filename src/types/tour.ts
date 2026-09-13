@@ -1,4 +1,3 @@
-import { DojangTourStatus } from "./festival";
 
 export type TourCategoryCode =
   | 'EV010100'
@@ -17,33 +16,6 @@ export type TourContent = {
   mapY: string;
   category: string;
   distance: string;
-};
-
-export type MyTourStamp = {
-  festivalId: string;
-  title: string;
-  imageUrl?: string;
-  stampCount: number;
-  eventEndDate: string;
-  status: DojangTourStatus;
-}
-
-export type StampDetailItem = {
-  stampId: string;
-};
-
-export type MyTourStampDetail = {
-  festivalId: string;
-  festivalImgUrl: string;
-  tourName: string;
-  stampCount: number;
-  stamps: StampDetailItem[];
-  status: DojangTourStatus;
-}
-
-export type TourStampListResult = {
-  rewardedTourCount: number;
-  tours: MyTourStamp[];
 };
 
 export type TourFilterCategory = 'menu' | 'culture' | 'history' | 'nature' | 'experience';
