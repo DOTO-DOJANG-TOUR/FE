@@ -183,7 +183,11 @@ export default function MyPageScreen() {
           {isEditingNickname ? (
             <View style={styles.nicknameEditRow}>
               <TextInput
-                value={nicknameDraft}
+                // 한글처럼 여러 키를 조합해 완성되는 입력은, value로 매 키 입력마다
+                // 리렌더링하면 조합 중이던 문자가 끊겨서 완성되지 않는다(영문/기호는
+                // 조합 과정 없이 바로 확정되므로 문제가 없었다). 그래서 value로 강제
+                // 제어하지 않고 defaultValue + onChangeText만으로 값을 추적한다.
+                defaultValue={nicknameDraft}
                 onChangeText={setNicknameDraft}
                 style={styles.nicknameInput}
                 maxLength={NICKNAME_MAX_LENGTH}
