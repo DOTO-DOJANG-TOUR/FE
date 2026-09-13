@@ -1,4 +1,5 @@
-import { MyTourStampDetail, TourStampListResult } from "@/types/tour";
+
+import { MyTourStampDetail, RewardQrResult, TourStampListResult } from "@/types/stamp";
 import { apiFetch } from "./client";
 
 export const startStampTour = async (
@@ -40,3 +41,11 @@ export const getMyStampsDetail = async (
 
   return response;
 }
+
+export const getRewardQr = async (
+  festivalId: string,
+): Promise<RewardQrResult> => {
+  return apiFetch<RewardQrResult>(
+    `/api/v1/stamps/my-tours/${festivalId}/qr-code`,
+  );
+};

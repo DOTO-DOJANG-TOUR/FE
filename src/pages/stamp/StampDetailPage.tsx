@@ -1,12 +1,15 @@
-import { getMyStampsDetail } from '@/apis/stamp';
+import { getMyStampsDetail, getRewardQr } from '@/apis/stamp';
 import DefaultFestivalImage from '@/assets/images/festival/common/card-dim-3.png';
 import { DojangTourButton } from '@/components/common/DojangTourButton';
 import FestivalMainTitle from '@/components/festival/main/FestivalMainTitle';
 import { BackIcon } from '@/components/icons/BackIcon';
 import { StampDashLineIcon } from '@/components/icons/StampDashLineIcon';
 import { StampEmptyIcon } from '@/components/icons/StampEmptyIcon';
+import StampQrModal from '@/components/stamp/StampQrModal';
 import { Colors, FontFamily, FontSize } from '@/constants/theme';
-import { MyTourStampDetail } from '@/types/tour';
+import { MyTourStampDetail } from '@/types/stamp';
+
+import { formatCompletedAt } from '@/utils/date';
 import { mapStampDetailDojangStatus } from '@/utils/dojangStatus';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -23,10 +26,13 @@ export default function FestivalDetailPage({
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [imageError, setImageError] = useState(false);
-  const [isActive, setIsActive] = useState(false);
 
   const [stampDetail, setStampDetail] =
     useState<MyTourStampDetail | null>(null);
+
+  const [rewardQrImage, setRewardQrImage] = useState<string | null>(null);
+  const [rewardModalVisible, setRewardModalVisible] = useState(false);
+  const [isRewardLoading, setIsRewardLoading] = useState(false);
 
   useEffect(() => {
     const fetchStampDetail = async () => {
@@ -59,6 +65,27 @@ export default function FestivalDetailPage({
     stampDetail?.festivalImgUrl && !imageError
       ? { uri: stampDetail.festivalImgUrl }
       : DefaultFestivalImage;
+
+  const handleRewardPress = async () => {
+    try {
+      setIsRewardLoading(true);
+
+      const data = await getRewardQr(festivalId);
+
+      setRewardQrImage(data.qrCodeImageUrl);
+      setRewardModalVisible(true);
+    } catch (error) {
+      console.error('보상 QR 조회 실패:', error);
+    } finally {
+      setIsRewardLoading(false);
+    }
+  };
+
+  // 보상 받기용 임시 데이터
+  // const TEST_REWARD = true;
+  // const buttonStatus = TEST_REWARD
+  // ? 'getReward'
+  // : dojangStatus;
 
   return (
     <View style={styles.container}>
@@ -118,51 +145,60 @@ export default function FestivalDetailPage({
               paddingTop={20}
             />
             <View style={styles.stampBox}>
-              <View style={styles.stampItem}>
-                <View style={styles.stampIconBox}>
-                  <StampEmptyIcon
-                    color={isActive ? Colors.pink.pink50 : '#DEDEDE'}
-                    subColor={isActive ? Colors.pink.pink25 : '#F6F6F6'}
-                    fill={isActive ? Colors.pink.pink10 : 'white'}
-                  />
-                  <StampDashLineIcon
-                    color={isActive ? Colors.pink.pink50 : '#DEDEDE'}
-                  />
-                </View>
-                <View style={styles.stampTextBox}>
-                  <Text style={styles.stampTitle}>이순신 광장</Text>
-                  <Text style={styles.stampUnderText}>2026.09.18 19:16 방문 완료</Text>
-                </View>
-              </View>
-              <View style={styles.stampItem}>
-                <View style={styles.stampIconBox}>
-                  <StampEmptyIcon
-                    color={isActive ? Colors.pink.pink50 : '#DEDEDE'}
-                    subColor={isActive ? Colors.pink.pink25 : '#F6F6F6'}
-                    fill={isActive ? Colors.pink.pink10 : 'white'}
-                  />
-                  <StampDashLineIcon
-                    color={isActive ? Colors.pink.pink50 : '#DEDEDE'}
-                  />
-                </View>
-                <View style={styles.stampTextBox}>
-                  <Text style={styles.stampTitle}>관광지 2</Text>
-                  <Text style={styles.stampUnderText}>관광지를 방문하고 도장을 획득해요</Text>
-                </View>
-              </View>
-              <View style={styles.stampItem}>
-                <View style={styles.stampIconBox}>
-                  <StampEmptyIcon
-                    color={isActive ? Colors.pink.pink50 : '#DEDEDE'}
-                    subColor={isActive ? Colors.pink.pink25 : '#F6F6F6'}
-                    fill={isActive ? Colors.pink.pink10 : 'white'}
-                  />
-                </View>
-                <View style={styles.stampTextBox}>
-                  <Text style={styles.stampTitle}>관광지 3</Text>
-                  <Text style={styles.stampUnderText}>관광지를 방문하고 도장을 획득해요</Text>
-                </View>
-              </View>
+              {Array.from({ length: 3 }).map((_, index) => {
+                const stamp = stampDetail.stamps[index];
+                const isStampActive = !!stamp;
+                const isDashActive = !!stampDetail.stamps[index + 1];
+
+                return (
+                  <View
+                    key={index}
+                    style={styles.stampItem}
+                  >
+                    <View style={styles.stampIconBox}>
+                      <StampEmptyIcon
+                        color={
+                          isStampActive
+                            ? Colors.pink.pink50
+                            : '#DEDEDE'
+                        }
+                        subColor={
+                          isStampActive
+                            ? Colors.pink.pink25
+                            : '#F6F6F6'
+                        }
+                        fill={
+                          isStampActive
+                            ? Colors.pink.pink10
+                            : 'white'
+                        }
+                      />
+
+                      {index < 2 && (
+                        <StampDashLineIcon
+                          color={
+                            isDashActive
+                              ? Colors.pink.pink50
+                              : '#DEDEDE'
+                          }
+                        />
+                      )}
+                    </View>
+
+                    <View style={styles.stampTextBox}>
+                      <Text style={styles.stampTitle}>
+                        {stamp?.title ?? `관광지 ${index + 1}`}
+                      </Text>
+
+                      <Text style={styles.stampUnderText}>
+                        {stamp
+                          ? `${formatCompletedAt(stamp.completedAt)} 방문 완료`
+                          : '관광지를 방문하고 도장을 획득해요'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
             <View style={styles.infoSection}>
               <View style={styles.infoBox}>
@@ -183,6 +219,11 @@ export default function FestivalDetailPage({
         {dojangStatus ? (
           <DojangTourButton
             status={dojangStatus}
+            onPress={() => {
+              if (dojangStatus === 'getReward') {
+                handleRewardPress();
+              }
+            }}
           />
         ) : (
           <ActivityIndicator
@@ -190,6 +231,13 @@ export default function FestivalDetailPage({
           />
         )}
       </View>
+      {rewardQrImage && (
+        <StampQrModal
+          visible={rewardModalVisible}
+          qrImage={rewardQrImage}
+          onClose={() => setRewardModalVisible(false)}
+        />
+      )}
     </View>
   )
 }
