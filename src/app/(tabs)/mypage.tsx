@@ -4,7 +4,7 @@ import { ErrorModal } from '@/components/common/ErrorModal';
 import { DotoBrandIcon, EditIcon } from '@/components/icons';
 import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
-import { ApiError, NetworkOfflineError } from '@/apis/client';
+import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import type { Member } from '@/types/auth';
 import { useEffect, useState } from 'react';
 import {
@@ -22,17 +22,9 @@ const POLICY_ITEMS = ['이용 약관', '개인정보 취급방침'];
 const NICKNAME_MIN_LENGTH = 2;
 const NICKNAME_MAX_LENGTH = 30;
 
-// 4xx(닉네임 검증, 사용자 없음 등)는 같은 요청을 재시도해도 결과가 바뀌지 않으므로
-// 서버가 내려준 메시지를 그대로 보여준다. 그 외(오프라인/5xx/타임아웃)만 재시도 대상이다.
-function isRetryableError(error: unknown) {
-  if (error instanceof ApiError) return error.status >= 500;
-  return true;
-}
-
 export default function MyPageScreen() {
   const authUser = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const expireSession = useAuthStore((state) => state.expireSession);
 
   const [member, setMember] = useState<Member | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -139,7 +131,9 @@ export default function MyPageScreen() {
       setIsWithdrawing(true);
       await withdrawMembership();
       setIsWithdrawalModalVisible(false);
-      await expireSession();
+      // 로컬 정리(clearAuthStorage 등)가 실패하더라도 서버 탈퇴는 이미 끝났으므로
+      // 화면 전환을 먼저 보장하는 logout()을 쓴다(expireSession은 정리를 기다린 뒤 전환한다).
+      await logout();
     } catch (error) {
       console.error('회원탈퇴 실패:', error);
       setIsWithdrawalModalVisible(false);
