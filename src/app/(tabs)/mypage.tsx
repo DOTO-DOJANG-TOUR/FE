@@ -1,30 +1,216 @@
+import { getMyProfile, updateMyNickname, withdrawMembership } from '@/apis/members';
 import { AlertModal } from '@/components/common/AlertModal';
-import { MyNaviIcon } from '@/components/icons';
+import { DotoBrandIcon, EditIcon } from '@/components/icons';
 import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ApiError } from '@/apis/client';
+import type { Member } from '@/types/auth';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const POLICY_ITEMS = ['이용 약관', '개인정보 취급방침'];
+const NICKNAME_MIN_LENGTH = 2;
+const NICKNAME_MAX_LENGTH = 30;
 
 export default function MyPageScreen() {
-  const user = useAuthStore((state) => state.user);
+  const authUser = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const [isWithdrawalModalVisible, setIsWithdrawalModalVisible] = useState(false);
+  const expireSession = useAuthStore((state) => state.expireSession);
 
-  const nickname = user?.nickname || '김만두';
+  const [member, setMember] = useState<Member | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [isEditingNickname, setIsEditingNickname] = useState(false);
+  const [nicknameDraft, setNicknameDraft] = useState('');
+  const [isSavingNickname, setIsSavingNickname] = useState(false);
+  const [nicknameError, setNicknameError] = useState<string | null>(null);
+
+  const [isWithdrawalModalVisible, setIsWithdrawalModalVisible] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
+
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+
+  const nickname = member?.nickname ?? authUser?.nickname ?? '';
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchProfile = async () => {
+      try {
+        setIsLoading(true);
+        setLoadError(null);
+        const result = await getMyProfile();
+        if (isMounted) setMember(result);
+      } catch (error) {
+        console.error('내 정보 조회 실패:', error);
+        if (isMounted) {
+          setLoadError(
+            error instanceof ApiError
+              ? error.message
+              : '정보를 불러오지 못했어요.',
+          );
+        }
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [reloadTrigger]);
+
+  const startEditingNickname = () => {
+    setNicknameDraft(nickname);
+    setNicknameError(null);
+    setIsEditingNickname(true);
+  };
+
+  const cancelEditingNickname = () => {
+    setIsEditingNickname(false);
+    setNicknameError(null);
+  };
+
+  const submitNickname = async () => {
+    const trimmed = nicknameDraft.trim();
+
+    if (trimmed.length < NICKNAME_MIN_LENGTH || trimmed.length > NICKNAME_MAX_LENGTH) {
+      setNicknameError(
+        `닉네임은 ${NICKNAME_MIN_LENGTH}자 이상 ${NICKNAME_MAX_LENGTH}자 이하여야 해요.`,
+      );
+      return;
+    }
+
+    try {
+      setIsSavingNickname(true);
+      setNicknameError(null);
+      const result = await updateMyNickname(trimmed);
+      setMember((prev) => (prev ? { ...prev, nickname: result.nickname } : prev));
+      setIsEditingNickname(false);
+    } catch (error) {
+      console.error('닉네임 수정 실패:', error);
+      setNicknameError(
+        error instanceof ApiError ? error.message : '닉네임 수정에 실패했어요.',
+      );
+    } finally {
+      setIsSavingNickname(false);
+    }
+  };
+
+  const confirmWithdrawal = async () => {
+    try {
+      setIsWithdrawing(true);
+      await withdrawMembership();
+      setIsWithdrawalModalVisible(false);
+      await expireSession();
+    } catch (error) {
+      console.error('회원탈퇴 실패:', error);
+      setIsWithdrawalModalVisible(false);
+      setActionErrorMessage(
+        error instanceof ApiError ? error.message : '회원탈퇴에 실패했어요.',
+      );
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator color={Colors.pink.pink50} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.centerContainer}>
+          <Text style={styles.errorText}>{loadError}</Text>
+          <Pressable
+            style={styles.retryButton}
+            onPress={() => setReloadTrigger((prev) => prev + 1)}
+          >
+            <Text style={styles.retryButtonText}>다시 시도</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
         <View style={styles.profileSection}>
           <View style={styles.profileImagePlaceholder}>
-            <MyNaviIcon color={Colors.gray.gray60} />
+            {member?.profile_img ? (
+              <Image source={{ uri: member.profile_img }} style={styles.profileImage} />
+            ) : (
+              <DotoBrandIcon />
+            )}
           </View>
-          <Text numberOfLines={2} ellipsizeMode="tail" style={styles.nickname}>
-            {nickname}
-          </Text>
+
+          {isEditingNickname ? (
+            <View style={styles.nicknameEditRow}>
+              <TextInput
+                value={nicknameDraft}
+                onChangeText={setNicknameDraft}
+                style={styles.nicknameInput}
+                maxLength={NICKNAME_MAX_LENGTH}
+                autoFocus
+                editable={!isSavingNickname}
+                onSubmitEditing={submitNickname}
+                returnKeyType="done"
+              />
+              <Pressable
+                style={styles.nicknameActionButton}
+                onPress={submitNickname}
+                disabled={isSavingNickname}
+              >
+                {isSavingNickname ? (
+                  <ActivityIndicator size="small" color={Colors.pink.pink50} />
+                ) : (
+                  <Text style={styles.nicknameActionText}>완료</Text>
+                )}
+              </Pressable>
+              <Pressable
+                style={styles.nicknameActionButton}
+                onPress={cancelEditingNickname}
+                disabled={isSavingNickname}
+              >
+                <Text style={styles.nicknameCancelText}>취소</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.nicknameRow}>
+              <Text numberOfLines={2} ellipsizeMode="tail" style={styles.nickname}>
+                {nickname}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={startEditingNickname}
+              >
+                <EditIcon color={Colors.gray.gray70} />
+              </Pressable>
+            </View>
+          )}
+          {nicknameError && <Text style={styles.nicknameErrorText}>{nicknameError}</Text>}
         </View>
 
         <View style={styles.menuSection}>
@@ -54,12 +240,20 @@ export default function MyPageScreen() {
       <AlertModal
         visible={isWithdrawalModalVisible}
         title="탈퇴하시겠습니까?"
-        description="탈퇴 이후에는 로그인 시 계정이 복구됩니다."
-        cancelText="취소"
-        confirmText="탈퇴"
+        description="14일 이내에 로그인 시 계정이 복구됩니다."
+        cancelText={isWithdrawing ? undefined : '취소'}
+        confirmText={isWithdrawing ? '처리 중...' : '탈퇴'}
         onClose={() => setIsWithdrawalModalVisible(false)}
-        // 실제 회원탈퇴 API 연동은 #45에서 처리한다.
-        onConfirm={() => setIsWithdrawalModalVisible(false)}
+        onConfirm={confirmWithdrawal}
+      />
+
+      <AlertModal
+        visible={actionErrorMessage !== null}
+        title="오류"
+        description={actionErrorMessage ?? ''}
+        confirmText="확인"
+        onClose={() => setActionErrorMessage(null)}
+        onConfirm={() => setActionErrorMessage(null)}
       />
     </SafeAreaView>
   );
@@ -74,12 +268,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.gray.gray00,
   },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    color: Colors.gray.gray70,
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.sm,
+    lineHeight: FontSize.sm * 1.5,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: Colors.pink.pink50,
+  },
+  retryButtonText: {
+    color: Colors.gray.gray00,
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.sm,
+    lineHeight: FontSize.sm * 1.5,
+  },
   profileSection: {
     alignItems: 'center',
     // Android 상단 안전영역을 포함한 피그마 프로필 위치에 맞춘 값이다.
     paddingTop: 86,
     // 피그마처럼 닉네임과 정책 섹션 사이의 여백을 유지한다.
     paddingBottom: 56,
+    paddingHorizontal: 20,
   },
   profileImagePlaceholder: {
     width: 112,
@@ -88,14 +309,65 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 24,
     backgroundColor: Colors.gray.gray20,
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+  },
+  nicknameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 26,
   },
   nickname: {
     maxWidth: 260,
-    marginTop: 26,
     color: Colors.gray.gray100,
     fontFamily: FontFamily.semiBold,
     fontSize: FontSize.md,
     lineHeight: 24,
+    textAlign: 'center',
+  },
+  nicknameEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 26,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  nicknameInput: {
+    minWidth: 140,
+    maxWidth: 180,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.gray.gray60,
+    color: Colors.gray.gray100,
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.md,
+  },
+  nicknameActionButton: {
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+  },
+  nicknameActionText: {
+    color: Colors.pink.pink50,
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.sm,
+  },
+  nicknameCancelText: {
+    color: Colors.gray.gray70,
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.sm,
+  },
+  nicknameErrorText: {
+    marginTop: 8,
+    color: Colors.pink.pink50,
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.xs,
     textAlign: 'center',
   },
   menuSection: {
