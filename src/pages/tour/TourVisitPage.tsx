@@ -1,13 +1,23 @@
+import { ApiError } from '@/apis/client';
+import { startTourSpotVisit } from '@/apis/tourVisit';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import {
   TOUR_DETAIL_SHEET_HEIGHT,
   TourDetailBottomSheet,
 } from '@/components/tour/TourDetailBottomSheet';
 import { TourMap } from '@/components/tour/TourMap';
-import { TOUR_ATTRACTIONS } from '@/constants/tourMockData';
+import { MOCK_FESTIVAL_ID, TOUR_ATTRACTIONS } from '@/constants/tourMockData';
 import { Colors } from '@/constants/theme';
+import { useTourVisitStore } from '@/stores/tourVisitStore';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+
+const DUPLICATE_VISIT_ERROR_CODES = new Set([
+  'STAMP-TOUR-409-002',
+  'TOUR-SPOT-VISIT-409-001',
+  'STAMP-409-001',
+]);
 
 export default function TourVisitPage() {
   const router = useRouter();
@@ -18,9 +28,30 @@ export default function TourVisitPage() {
   }>();
   const attraction = TOUR_ATTRACTIONS.find((item) => item.id === attractionId);
   const [expanded, setExpanded] = useState(true);
-  const [visited, setVisited] = useState(
-    visitedParam === '1' || attraction?.visited === true,
-  );
+  const visited = visitedParam === '1' || attraction?.visited === true;
+  const [retryVisible, setRetryVisible] = useState(false);
+  const [duplicateVisitMessage, setDuplicateVisitMessage] = useState<string | null>(null);
+
+  const handleVisit = async () => {
+    if (!attraction) return;
+
+    try {
+      const response = await startTourSpotVisit(MOCK_FESTIVAL_ID, attraction.id);
+      await useTourVisitStore.getState().start({
+        festivalId: MOCK_FESTIVAL_ID,
+        tourSpotId: response.tourSpotId,
+        tourSpotName: response.tourSpotName,
+        expiresAt: response.expiresAt,
+      });
+      router.push('/check-in');
+    } catch (error) {
+      if (error instanceof ApiError && DUPLICATE_VISIT_ERROR_CODES.has(error.code ?? '')) {
+        setDuplicateVisitMessage(error.message);
+        return;
+      }
+      setRetryVisible(true);
+    }
+  };
 
   if (!attraction) {
     return (
@@ -48,7 +79,24 @@ export default function TourVisitPage() {
         visited={visited}
         onClose={() => router.back()}
         onExpandedChange={setExpanded}
-        onVisited={() => setVisited(true)}
+        onVisited={handleVisit}
+      />
+
+      <ErrorModal
+        visible={retryVisible}
+        onCancel={() => setRetryVisible(false)}
+        onRetry={() => {
+          setRetryVisible(false);
+          handleVisit();
+        }}
+      />
+
+      <ErrorModal
+        visible={duplicateVisitMessage !== null}
+        title="방문을 시작할 수 없어요"
+        description={duplicateVisitMessage ?? undefined}
+        onCancel={() => setDuplicateVisitMessage(null)}
+        onRetry={() => setDuplicateVisitMessage(null)}
       />
     </View>
   );

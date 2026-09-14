@@ -2,6 +2,11 @@ import type { TourAttraction } from '@/types/tour';
 
 export const ACTIVE_TOUR_TITLE = '거문도백도 은빛바다 체험행사';
 
+// [임시 처리] #37(투어 지도·위치 연동) 머지 전이라 관광지 목록이 mock이고 festivalId가
+// 화면 어디에도 흐르지 않는다. 방문 시작 API 호출에 필요한 festivalId를 임시로 고정해두고,
+// #37 머지 후 실제 라우트 파라미터로 대체한다.
+export const MOCK_FESTIVAL_ID = 'mock-festival-id';
+
 export const TOUR_ATTRACTIONS: TourAttraction[] = [
   {
     id: 'isunsin-square',
