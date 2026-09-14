@@ -244,9 +244,15 @@ export default function SearchPage({
                 <MainItemBlock
                   type="tour"
                   tour={item}
-                  onPress={() => {
-                    // tour route 생성 후 연결 예정
-                  }}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/visit',
+                      params: {
+                        attractionId: item.tourSpotId,
+                        festivalId,
+                      },
+                    })
+                  }
                 />
               )}
             />

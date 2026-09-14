@@ -87,17 +87,21 @@ export default function TourCheckInPage() {
     }
 
     setSubmitting(true);
-    const coords = await requestLocation();
-    if (!coords) {
+    const result = await requestLocation();
+    if (!result.coords) {
       setSubmitting(false);
-      setLocationDeniedVisible(true);
+      if (result.permission === 'denied') {
+        setLocationDeniedVisible(true);
+      } else {
+        setRetryVisible(true);
+      }
       return;
     }
 
     try {
       await createTourSpotStamp(festivalId, tourSpotId, {
-        mapX: coords.longitude,
-        mapY: coords.latitude,
+        mapX: result.coords.lng,
+        mapY: result.coords.lat,
       });
       setSubmitting(false);
       setCompleted(true);

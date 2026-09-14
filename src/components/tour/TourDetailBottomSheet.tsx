@@ -9,6 +9,9 @@ import type { TourAttraction } from '@/types/tour';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Animated,
+  Image,
+  LayoutChangeEvent,
+  Linking,
   PanResponder,
   Pressable,
   ScrollView,
@@ -17,7 +20,6 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { CheckerPlaceholder } from './CheckerPlaceholder';
 import { CloseIcon } from './TourIcons';
 
 type Props = {
@@ -30,6 +32,7 @@ type Props = {
 };
 
 const COLLAPSED_HEIGHT = 184;
+const HANDLE_AREA_HEIGHT = 28;
 
 export function TourDetailBottomSheet({
   attraction,
@@ -40,11 +43,16 @@ export function TourDetailBottomSheet({
   onVisited,
 }: Props) {
   const { height: screenHeight } = useWindowDimensions();
-  const expandedHeight = Math.max(
-    COLLAPSED_HEIGHT,
-    Math.min(600, screenHeight - 196),
-  );
-  const [height] = useState(() => new Animated.Value(expandedHeight));
+  const maxHeight = Math.max(COLLAPSED_HEIGHT, Math.min(600, screenHeight - 196));
+
+  // 관광지 정보량(전화/홈페이지 유무, 사진 개수 등)에 따라 실제 내용 높이가 달라지므로,
+  // 타이틀+본문을 실측해서 그 높이(+핸들 영역)에 맞춰 펼친다(내용이 적으면 시트도 작게).
+  const [measuredContentHeight, setMeasuredContentHeight] = useState<number | null>(null);
+  const expandedHeight = measuredContentHeight
+    ? Math.min(Math.max(HANDLE_AREA_HEIGHT + measuredContentHeight, COLLAPSED_HEIGHT), maxHeight)
+    : maxHeight;
+
+  const [height] = useState(() => new Animated.Value(COLLAPSED_HEIGHT));
   const [confirmVisible, setConfirmVisible] = useState(false);
 
   useEffect(() => {
@@ -56,6 +64,10 @@ export function TourDetailBottomSheet({
       useNativeDriver: false,
     }).start();
   }, [expanded, expandedHeight, height]);
+
+  const handleContentLayout = (event: LayoutChangeEvent) => {
+    setMeasuredContentHeight(event.nativeEvent.layout.height);
+  };
 
   const panResponder = useMemo(
     () =>
@@ -87,48 +99,57 @@ export function TourDetailBottomSheet({
           <View style={styles.handle} />
         </Pressable>
 
-        <View style={styles.titleRow}>
-          <Text numberOfLines={2} style={styles.title}>
-            {attraction.title}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="관광지 상세 닫기"
-            hitSlop={10}
-            onPress={onClose}
-          >
-            <CloseIcon />
-          </Pressable>
-        </View>
-
-        {expanded && (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.content}
-          >
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.photoRow}
+        {/* handleArea 아래 전부를 하나로 묶어 실제 렌더 높이를 한 번에 잰다(펼쳐졌을 때만). */}
+        <View onLayout={expanded ? handleContentLayout : undefined}>
+          <View style={styles.titleRow}>
+            <Text numberOfLines={2} style={styles.title}>
+              {attraction.title}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="관광지 상세 닫기"
+              hitSlop={10}
+              onPress={onClose}
             >
-              {Array.from({ length: attraction.imageCount }).map((_, index) => (
-                <CheckerPlaceholder
-                  key={`${attraction.id}-${index}`}
-                  columns={4}
-                  rows={4}
-                  rounded
-                  style={styles.photo}
-                />
-              ))}
-            </ScrollView>
+              <CloseIcon />
+            </Pressable>
+          </View>
 
-            <View style={styles.infoGroup}>
-              <InfoRow icon={<LocationIcon />} text={attraction.address} />
-              <InfoRow icon={<PhoneIcon />} text={attraction.phone} />
-              <InfoRow icon={<WebIcon />} text={attraction.homepage} isLink />
-            </View>
-          </ScrollView>
-        )}
+          {expanded && (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.content}>
+                {attraction.imageUrls.length > 0 && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.photoRow}
+                  >
+                    {attraction.imageUrls.map((imageUrl, index) => (
+                      <Image
+                        key={`${attraction.id}-${index}`}
+                        source={{ uri: imageUrl }}
+                        style={[styles.photo, styles.photoRounded]}
+                      />
+                    ))}
+                  </ScrollView>
+                )}
+
+                <View style={styles.infoGroup}>
+                  <InfoRow icon={<LocationIcon />} text={attraction.address} />
+                  {attraction.phone && <InfoRow icon={<PhoneIcon />} text={attraction.phone} />}
+                  {attraction.homepage && (
+                    <InfoRow
+                      icon={<WebIcon />}
+                      text={attraction.homepage}
+                      isLink
+                      onPress={() => Linking.openURL(attraction.homepage!)}
+                    />
+                  )}
+                </View>
+              </View>
+            </ScrollView>
+          )}
+        </View>
 
         <View style={styles.buttonArea}>
           <DojangTourButton
@@ -156,14 +177,23 @@ type InfoRowProps = {
   icon: React.ReactNode;
   text: string;
   isLink?: boolean;
+  onPress?: () => void;
 };
 
-function InfoRow({ icon, text, isLink = false }: InfoRowProps) {
-  return (
+function InfoRow({ icon, text, isLink = false, onPress }: InfoRowProps) {
+  const row = (
     <View style={styles.infoRow}>
       <View style={styles.infoIcon}>{icon}</View>
       <Text style={[styles.infoText, isLink && styles.linkText]}>{text}</Text>
     </View>
+  );
+
+  if (!onPress) return row;
+
+  return (
+    <Pressable accessibilityRole="link" onPress={onPress}>
+      {row}
+    </Pressable>
   );
 }
 
@@ -184,7 +214,7 @@ const styles = StyleSheet.create({
     boxShadow: TourColors.sheetShadow,
   },
   handleArea: {
-    height: 28,
+    height: HANDLE_AREA_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -219,6 +249,9 @@ const styles = StyleSheet.create({
   photo: {
     width: 116,
     height: 116,
+  },
+  photoRounded: {
+    borderRadius: Radius.md,
   },
   infoGroup: {
     gap: 14,

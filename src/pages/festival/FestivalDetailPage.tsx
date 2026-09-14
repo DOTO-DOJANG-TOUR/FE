@@ -100,14 +100,24 @@ export default function FestivalDetailPage({
         if (dojangStatus === 'start') {
             try {
                 await startStampTour(festivalId);
+            } catch (error) {
+                console.error('스탬프 투어 시작 실패:', error);
+                return;
+            }
 
+            // 투어 시작은 이미 서버에 반영됐으므로, 이후 상태 재조회가 실패하더라도 이동은
+            // 그대로 진행한다. GET /api/v1/stamp-tour가 festivalId 없이도 현재 진행 중인
+            // 투어를 내려주므로 파라미터 없이 이동해도 Tour 탭이 알아서 다시 조회한다.
+            router.push('/(tabs)/tour');
+
+            try {
                 const data = await getFestivalDojangTourStatus(festivalId);
 
                 setDojangStatus(
                     mapDojangTourStatus(data.status),
                 );
             } catch (error) {
-                console.error('스탬프 투어 시작 실패:', error);
+                console.error('도장투어 상태 재조회 실패:', error);
             }
 
             return;
