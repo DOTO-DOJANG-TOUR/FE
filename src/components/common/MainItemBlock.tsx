@@ -1,8 +1,10 @@
 import DefaultImage from '@/assets/images/festival/common/card-dim-2.png';
+import { mapTourCategory } from '@/constants/tourCategory';
 import { FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { FestivalContent } from '@/types/festival';
 import { TourContent } from '@/types/tour';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { CategoryBadge } from './CategoryBadge';
 import { FestivalCategoryBadge } from './FestivalCategoryBadge';
 import { FestivalStatusBadge } from './FestivalStatusBadge';
 
@@ -65,13 +67,21 @@ export const MainItemBlock = (props: Props) => {
               <Text style={styles.text}>{props.festival.eventStartDate} ~ {props.festival.eventEndDate}</Text>
             </>
           ) : (
-            <Text style={styles.text}>{props.tour.distance}m · {props.tour.address}</Text>
+            <Text style={styles.text}>
+              {props.tour.distance ? `${props.tour.distance} · ` : ''}
+              {props.tour.address}
+            </Text>
           )}
         </View>
 
-
-        {/* 카테고리 code는 api연동 후 수정 */}
-        <FestivalCategoryBadge category={category} />
+        {props.type === 'festival' ? (
+          <FestivalCategoryBadge category={category} />
+        ) : (
+          (() => {
+            const tourCategory = mapTourCategory(category);
+            return tourCategory ? <CategoryBadge category={tourCategory} /> : null;
+          })()
+        )}
       </View>
     </Pressable>
   )
