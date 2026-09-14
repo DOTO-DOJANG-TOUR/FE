@@ -23,3 +23,18 @@ export type TourAttraction = {
   imageCount: number;
   visited?: boolean;
 };
+
+export type CurrentVisitTourSpot = {
+  tourSpotId: string;
+  tourSpotName: string;
+  expiresAt: string;
+};
+
+export type StampLocation = {
+  mapX: number;
+  mapY: number;
+};
+
+export type Stamp = {
+  stampId: string;
+};
