@@ -38,7 +38,14 @@ export default function TourMainPage() {
   } | null>(null);
   const [locationDeniedDismissed, setLocationDeniedDismissed] = useState(false);
   const [locationUnavailableVisible, setLocationUnavailableVisible] = useState(false);
-  const [festivalCenter, setFestivalCenter] = useState<GeoPoint | null>(null);
+  // 진행 중인 스탬프 투어가 바뀌면(예: 투어 중단 후 다른 투어 시작) festivalId도 바뀌는데,
+  // 새 축제의 좌표 조회(geocodeAddress)가 실패하면 이전 축제의 center가 남아 다른 축제의
+  // 관광지 좌표와 함께 bounds 계산에 섞여 들어갈 수 있다. 어느 축제의 center인지 같이
+  // 기록해서, 현재 festivalId와 일치할 때만 bounds에 반영한다.
+  const [festivalCenter, setFestivalCenter] = useState<{
+    festivalId: string;
+    point: GeoPoint;
+  } | null>(null);
   const [groupPickerOptions, setGroupPickerOptions] = useState<MarkerGroupOption[] | null>(null);
   const [navigatingAttractionId, setNavigatingAttractionId] = useState<string | null>(null);
 
@@ -54,6 +61,7 @@ export default function TourMainPage() {
     permission: locationPermission,
     canAskAgain: locationCanAskAgain,
     requestLocation,
+    checkLocation,
   } = useCurrentLocation();
 
   // 탭을 벗어났다 돌아와도(투어 시작/중단 직후 등) 최신 상태를 다시 받아오도록 마운트가 아닌
@@ -91,8 +99,10 @@ export default function TourMainPage() {
     }, [reloadTrigger]),
   );
 
+  // 마운트 시엔 사용자 조작 없이 권한 대화상자가 뜨지 않도록 현재 권한 상태만 확인한다.
+  // 권한 요청 자체는 위치 버튼을 눌렀을 때(handleLocationPress)만 한다.
   useEffect(() => {
-    requestLocation();
+    checkLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -113,7 +123,7 @@ export default function TourMainPage() {
       try {
         const festival = await getFestivalDetail(festivalId);
         const center = await geocodeAddress(festival.address);
-        if (isMounted) setFestivalCenter(center);
+        if (isMounted) setFestivalCenter(center ? { festivalId, point: center } : null);
       } catch (error) {
         console.warn('축제 위치 조회 실패:', error);
       }
@@ -184,11 +194,11 @@ export default function TourMainPage() {
 
   useEffect(() => {
     const points = filteredItems.map((item) => item.point);
-    if (festivalCenter) points.push(festivalCenter);
+    if (festivalCenter && festivalCenter.festivalId === festivalId) points.push(festivalCenter.point);
     if (points.length === 0) return;
 
     mapRef.current?.focusOnBounds(points);
-  }, [filteredItems, festivalCenter]);
+  }, [filteredItems, festivalCenter, festivalId]);
 
   // 이동하기 전에 상세 데이터를 먼저 받아둔다 — 화면을 바꾸고 나서 로딩을 띄우면 회색 화면이
   // 잠깐 끼어드는 느낌이 나서, 대신 이 화면을 유지한 채로 기다렸다가 데이터가 준비되면 그때

@@ -12,6 +12,26 @@ type RequestLocationResult = {
 
 type CurrentLocationState = RequestLocationResult & { isLoading: boolean };
 
+// 권한이 이미 granted인 경우에만 실제 좌표 조회를 시도한다(요청 여부와 무관한 공통 처리).
+async function resolveCurrentPosition(): Promise<RequestLocationResult> {
+  try {
+    const position = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+    });
+
+    return {
+      coords: { lat: position.coords.latitude, lng: position.coords.longitude },
+      permission: 'granted',
+      canAskAgain: true,
+    };
+  } catch (error) {
+    // 권한은 허용됐지만(status === 'granted') 기기 위치 서비스 자체가 꺼져 있는 등
+    // 일시적으로 좌표를 못 가져오는 흔한 케이스라 console.error(LogBox 전체화면 에러)는 피한다.
+    console.warn('현재 위치 조회 실패:', error);
+    return { coords: null, permission: 'granted', canAskAgain: true };
+  }
+}
+
 export function useCurrentLocation() {
   const [state, setState] = useState<CurrentLocationState>({
     coords: null,
@@ -33,27 +53,28 @@ export function useCurrentLocation() {
       return result;
     }
 
-    try {
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+    const result = await resolveCurrentPosition();
+    setState({ ...result, isLoading: false });
+    return result;
+  }, []);
 
-      const result: RequestLocationResult = {
-        coords: { lat: position.coords.latitude, lng: position.coords.longitude },
-        permission: 'granted',
-        canAskAgain: true,
-      };
-      setState({ ...result, isLoading: false });
-      return result;
-    } catch (error) {
-      // 권한은 허용됐지만(status === 'granted') 기기 위치 서비스 자체가 꺼져 있는 등
-      // 일시적으로 좌표를 못 가져오는 흔한 케이스라 console.error(LogBox 전체화면 에러)는 피한다.
-      console.warn('현재 위치 조회 실패:', error);
-      const result: RequestLocationResult = { coords: null, permission: 'granted', canAskAgain: true };
+  // requestLocation과 달리 권한 대화상자를 띄우지 않고 현재 권한 상태만 확인한다 — 사용자
+  // 조작(위치 버튼) 없이 화면 마운트만으로 권한 재요청 대화상자가 뜨는 것을 막기 위해 쓴다.
+  const checkLocation = useCallback(async (): Promise<RequestLocationResult> => {
+    setState((prev) => ({ ...prev, isLoading: true }));
+
+    const { status, canAskAgain } = await Location.getForegroundPermissionsAsync();
+
+    if (status !== 'granted') {
+      const result: RequestLocationResult = { coords: null, permission: 'denied', canAskAgain };
       setState({ ...result, isLoading: false });
       return result;
     }
+
+    const result = await resolveCurrentPosition();
+    setState({ ...result, isLoading: false });
+    return result;
   }, []);
 
-  return { ...state, requestLocation };
+  return { ...state, requestLocation, checkLocation };
 }
