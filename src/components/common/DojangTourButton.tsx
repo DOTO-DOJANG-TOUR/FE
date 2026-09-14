@@ -8,6 +8,7 @@ type DojangTourButtonStatus =
   | 'start'
   | 'stop'
   | 'visitAndStamp'
+  | 'arrived'
   | 'alreadyVisited'
   | 'alreadyJoinedTour'
   | 'inOtherTour'
@@ -22,6 +23,7 @@ const statusConfig: Record<DojangTourButtonStatus, { label: string; active: bool
   start: { label: '도장 투어 시작하기', active: true },
   stop: { label: '도장 투어 중단하기', active: true },
   visitAndStamp: { label: '방문하고 도장 받기', active: true },
+  arrived: { label: '관광지에 도착했어요', active: true },
   alreadyVisited: { label: '이미 방문한 관광지예요', active: false },
   alreadyJoinedTour: { label: '이미 참여한 투어예요', active: false },
   inOtherTour: { label: '다른 투어에 참여 중이에요', active: false },

@@ -30,8 +30,11 @@ export const Colors = {
   gray: {
     gray00: '#FFFFFF',
     gray20: '#F6F6F6',
+    gray30: '#DEDEDE',
     gray60: '#BCBCBC',
     gray70: '#A8A8A8',
+    gray80: '#5A5A5A',
+    gray90: '#323232',
     gray100: '#262626',
   },
   pink: {
@@ -44,6 +47,7 @@ export const Colors = {
   blue: {
     blue10: '#F2F9FF',
     blue20: '#4598FE',
+    blue30: '#2788FF',
   },
 } as const;
 
