@@ -11,6 +11,7 @@ import {
   Animated,
   Image,
   LayoutChangeEvent,
+  Linking,
   PanResponder,
   Pressable,
   ScrollView,
@@ -137,7 +138,12 @@ export function TourDetailBottomSheet({
                   <InfoRow icon={<LocationIcon />} text={attraction.address} />
                   {attraction.phone && <InfoRow icon={<PhoneIcon />} text={attraction.phone} />}
                   {attraction.homepage && (
-                    <InfoRow icon={<WebIcon />} text={attraction.homepage} isLink />
+                    <InfoRow
+                      icon={<WebIcon />}
+                      text={attraction.homepage}
+                      isLink
+                      onPress={() => Linking.openURL(attraction.homepage!)}
+                    />
                   )}
                 </View>
               </View>
@@ -171,14 +177,23 @@ type InfoRowProps = {
   icon: React.ReactNode;
   text: string;
   isLink?: boolean;
+  onPress?: () => void;
 };
 
-function InfoRow({ icon, text, isLink = false }: InfoRowProps) {
-  return (
+function InfoRow({ icon, text, isLink = false, onPress }: InfoRowProps) {
+  const row = (
     <View style={styles.infoRow}>
       <View style={styles.infoIcon}>{icon}</View>
       <Text style={[styles.infoText, isLink && styles.linkText]}>{text}</Text>
     </View>
+  );
+
+  if (!onPress) return row;
+
+  return (
+    <Pressable accessibilityRole="link" onPress={onPress}>
+      {row}
+    </Pressable>
   );
 }
 
