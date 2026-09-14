@@ -54,7 +54,9 @@ export default function TourVisitPage() {
   const [prevAttractionId, setPrevAttractionId] = useState(attractionId);
   if (attractionId !== prevAttractionId) {
     setPrevAttractionId(attractionId);
-    setVisited(visitedParam === '1');
+    // visitedParam은 최초 진입 시점의 값이라 다른 관광지로 전환할 때 그대로 쓰면 안 된다.
+    // 전환된 관광지의 방문 여부를 별도로 조회하지 않으므로 일단 false로 초기화한다.
+    setVisited(false);
     setExpanded(true);
 
     // 이동할 관광지가 이미 캐시에 있으면(다시 보는 마커 등) 바로 반영한다. 없으면 이전 관광지 내용을
@@ -88,11 +90,19 @@ export default function TourVisitPage() {
         }
       } catch (error) {
         console.error('관광지 상세 조회 실패:', error);
-        if (isMounted && isRetryableError(error)) {
-          setFailedRequest({
-            retry: () => setReloadTrigger((prev) => prev + 1),
-            isOffline: error instanceof NetworkOfflineError,
-          });
+        if (isMounted) {
+          // 전환 실패 시 이전 관광지 내용을 그대로 유지하면 URL·선택 마커는 새 관광지를
+          // 가리키는데 상세 시트는 이전 관광지를 보여주는 상태가 된다 — 이전 관광지로
+          // 되돌려서 화면 전체가 다시 일치하게 한다.
+          if (detail && detail.tourSpotId !== attractionId) {
+            router.setParams({ attractionId: detail.tourSpotId });
+          }
+          if (isRetryableError(error)) {
+            setFailedRequest({
+              retry: () => setReloadTrigger((prev) => prev + 1),
+              isOffline: error instanceof NetworkOfflineError,
+            });
+          }
         }
       } finally {
         if (isMounted) setIsLoading(false);
@@ -104,7 +114,7 @@ export default function TourVisitPage() {
     return () => {
       isMounted = false;
     };
-  }, [festivalId, attractionId, reloadTrigger, detail]);
+  }, [festivalId, attractionId, reloadTrigger, detail, router]);
 
   const attraction = useMemo<TourAttraction | null>(() => {
     if (!detail) return null;
