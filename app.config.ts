@@ -20,6 +20,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           },
         },
       ],
+      [
+        'expo-location',
+        {
+          locationWhenInUsePermission: '관광지 방문 인증을 위해 현재 위치가 필요합니다.',
+        },
+      ],
       ...(kakaoPlugin ? [kakaoPlugin] : []),
     ],
   };
