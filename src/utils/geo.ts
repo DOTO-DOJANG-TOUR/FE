@@ -54,8 +54,13 @@ export function groupByCoordinate<T>(items: T[], getPoint: (item: T) => GeoPoint
 
   items.forEach((item) => {
     const point = getPoint(item);
-    const existing = groups.find(
-      (group) => distanceMeters({ lat: group.lat, lng: group.lng }, point) <= MARKER_GROUP_RADIUS_M,
+    // 그룹 평균 좌표(centroid)만 비교하면, centroid가 계속 이동하면서 서로 50m보다 먼
+    // 관광지끼리도 연쇄적으로 같은 그룹에 묶일 수 있다. 그룹 내 모든 기존 구성원과 각각
+    // 50m 이내인 경우에만 묶는다.
+    const existing = groups.find((group) =>
+      group.items.every(
+        (groupItem) => distanceMeters(getPoint(groupItem), point) <= MARKER_GROUP_RADIUS_M,
+      ),
     );
 
     if (existing) {
