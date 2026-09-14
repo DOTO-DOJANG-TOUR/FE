@@ -62,6 +62,7 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
   const isReadyRef = useRef(false);
   const pendingCommandsRef = useRef<string[]>([]);
   const [isReady, setIsReady] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const html = useMemo(() => getKakaoMapHtml(KAKAO_JAVASCRIPT_KEY ?? ''), []);
 
@@ -129,10 +130,21 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
 
       if (message.type === 'error') {
         console.error('[TourMap] WebView error:', message.message);
+        // SDK 로드 실패 등으로 ready가 영영 오지 않으면 로딩 스피너가 계속 떠 있게 되므로,
+        // 에러 상태로 전환해 재시도 UI를 보여준다.
+        setLoadError(true);
       }
     } catch (error) {
       console.error('[TourMap] 메시지 파싱 실패:', error);
     }
+  };
+
+  const handleRetry = () => {
+    setLoadError(false);
+    isReadyRef.current = false;
+    pendingCommandsRef.current = [];
+    setIsReady(false);
+    webViewRef.current?.reload();
   };
 
   return (
@@ -147,10 +159,19 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
         onMessage={handleMessage}
       />
 
-      {!isReady && (
-        <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
-          <ActivityIndicator color={Colors.pink.pink50} />
+      {loadError ? (
+        <View style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
+          <Text style={styles.errorText}>지도를 불러오지 못했어요</Text>
+          <Pressable accessibilityRole="button" style={styles.retryButton} onPress={handleRetry}>
+            <Text style={styles.retryButtonText}>다시 시도</Text>
+          </Pressable>
         </View>
+      ) : (
+        !isReady && (
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
+            <ActivityIndicator color={Colors.pink.pink50} />
+          </View>
+        )
       )}
 
       <View style={styles.searchRow}>
@@ -183,7 +204,24 @@ const styles = StyleSheet.create({
   loadingOverlay: {
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
     backgroundColor: Colors.gray.gray20,
+  },
+  errorText: {
+    color: Colors.gray.gray70,
+    fontSize: FontSize.sm,
+    fontFamily: FontFamily.medium,
+  },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.pink.pink50,
+  },
+  retryButtonText: {
+    color: Colors.gray.gray00,
+    fontSize: FontSize.sm,
+    fontFamily: FontFamily.medium,
   },
   searchRow: {
     position: 'absolute',
