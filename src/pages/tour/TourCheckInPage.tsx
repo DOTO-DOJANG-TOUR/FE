@@ -48,11 +48,13 @@ export default function TourCheckInPage() {
   const [exitConfirmVisible, setExitConfirmVisible] = useState(false);
   const [tooFarVisible, setTooFarVisible] = useState(false);
   const [locationDeniedVisible, setLocationDeniedVisible] = useState(false);
+  const [locationUnavailableVisible, setLocationUnavailableVisible] = useState(false);
   const [retryVisible, setRetryVisible] = useState(false);
 
   const navigateBack = () => {
-    if (router.canGoBack()) router.back();
-    else router.replace('/(tabs)/tour');
+    // 딥링크·화면 잠금 해제 직후에는 canGoBack()이 true여도 실제 back stack이 없어
+    // GO_BACK 경고가 날 수 있다. 체크인 종료 지점은 항상 투어 메인으로 명시 이동한다.
+    router.replace('/(tabs)/tour');
   };
 
   // 서버가 내려준 expiresAt 기준으로 매초 다시 계산한다(로컬에서 7시간을 새로 세지 않음).
@@ -87,32 +89,34 @@ export default function TourCheckInPage() {
     }
 
     setSubmitting(true);
-    const result = await requestLocation();
-    if (!result.coords) {
-      setSubmitting(false);
-      if (result.permission === 'denied') {
-        setLocationDeniedVisible(true);
-      } else {
-        setRetryVisible(true);
-      }
-      return;
-    }
-
     try {
+      const result = await requestLocation();
+      if (!result.coords) {
+        if (result.permission === 'denied') {
+          setLocationDeniedVisible(true);
+        } else {
+          // 권한은 있지만 GPS가 좌표를 주지 못한 경우다. 서버 요청 실패가 아니므로
+          // 일반 "일시적인 오류"와 구분해 위치 서비스를 확인하도록 안내한다.
+          setLocationUnavailableVisible(true);
+        }
+        return;
+      }
+
       await createTourSpotStamp(festivalId, tourSpotId, {
         mapX: result.coords.lng,
         mapY: result.coords.lat,
       });
-      setSubmitting(false);
       setCompleted(true);
       void restore();
     } catch (error) {
-      setSubmitting(false);
       if (error instanceof ApiError && error.code === 'STAMP-400-001') {
         setTooFarVisible(true);
         return;
       }
       setRetryVisible(true);
+    } finally {
+      // 위치 권한 요청 자체가 예외를 던져도 버튼이 영구 비활성화되지 않게 한다.
+      setSubmitting(false);
     }
   };
 
@@ -258,6 +262,16 @@ export default function TourCheckInPage() {
           setLocationDeniedVisible(false);
           Linking.openSettings();
         }}
+      />
+
+      <AlertModal
+        visible={locationUnavailableVisible}
+        title="현재 위치를 확인할 수 없어요"
+        description={'기기 위치 서비스를 켜거나 위치를 설정한 후\n다시 시도해 주세요.'}
+        confirmText="확인"
+        confirmTextColor={Colors.blue.blue30}
+        onClose={() => setLocationUnavailableVisible(false)}
+        onConfirm={() => setLocationUnavailableVisible(false)}
       />
 
       <ErrorModal
