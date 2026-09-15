@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   },
   region: {
     paddingTop: Spacing.two,
-    color: '#DEDEDE',
+    color: '#F6F6F6',
     fontFamily: FontFamily.semiBold,
     fontSize: 13,
     lineHeight: 13 * 1.5,

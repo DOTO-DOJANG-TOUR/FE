@@ -1,6 +1,6 @@
 import DefaultImage from '@/assets/images/festival/common/card-dim-2.png';
-import { mapTourCategory } from '@/constants/tourCategory';
 import { FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
+import { mapTourCategory } from '@/constants/tourCategory';
 import { FestivalContent } from '@/types/festival';
 import { TourContent } from '@/types/tour';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -64,7 +64,7 @@ export const MainItemBlock = (props: Props) => {
           {props.type === 'festival' ? (
             <>
               <Text style={styles.text}>{props.festival.gunguName}</Text>
-              <Text style={styles.text}>{props.festival.eventStartDate} ~ {props.festival.eventEndDate}</Text>
+              <Text style={styles.text}>{props.festival.eventStartDate.replace(/-/g, '.')} ~ {props.festival.eventEndDate.replace(/-/g, '.')}</Text>
             </>
           ) : (
             <Text style={styles.text}>
