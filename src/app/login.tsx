@@ -1,6 +1,6 @@
 import { signInWithSocialToken } from '@/apis/auth';
 import { SocialLoginButton } from '@/components/auth/SocialLoginButton';
-import { DotoFlowerIcon, DotoLogoIcon } from '@/components/icons';
+import { DotoFlowerMarkIcon, DotoLogoIcon } from '@/components/icons';
 import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { requestSocialIdToken } from '@/services/socialOAuth';
 import { useAuthStore } from '@/stores/authStore';
@@ -41,7 +41,7 @@ export default function LoginScreen() {
         ]}
       >
         <View style={styles.hero}>
-          <DotoFlowerIcon />
+          <DotoFlowerMarkIcon />
           <Text style={styles.title}>
             축제 관광을 <Text style={styles.highlight}>도장 투어</Text>로
           </Text>
