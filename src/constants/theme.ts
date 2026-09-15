@@ -32,6 +32,7 @@ export const Colors = {
     gray10: '#FAFAFA',
     gray20: '#F6F6F6',
     gray30: '#DEDEDE',
+    gray50: '#CFCFCF',
     gray60: '#BCBCBC',
     gray70: '#A8A8A8',
     gray80: '#5A5A5A',

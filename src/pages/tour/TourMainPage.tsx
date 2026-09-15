@@ -5,6 +5,7 @@ import { getMyStampTour } from '@/apis/stamp';
 import { getTourSpotDetail, getTourSpots } from '@/apis/tour';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ErrorModal } from '@/components/common/ErrorModal';
+import { LoadingIndicator } from '@/components/common/LoadingIndicator';
 import { TOUR_SHEET_HEIGHT, TourBottomSheet } from '@/components/tour/TourBottomSheet';
 import { MarkerGroupPicker, type MarkerGroupOption } from '@/components/tour/MarkerGroupPicker';
 import { TourMap, type TourMapHandle, type TourMapMarker } from '@/components/tour/TourMap';
@@ -285,8 +286,9 @@ export default function TourMainPage() {
         <View style={styles.noTourIcon}>
           <Text style={styles.noTourIconText}>×</Text>
         </View>
-        <Text style={styles.noTourTitle}>참여 중인 투어가 없어요.</Text>
-        <Text style={styles.noTourDescription}>축제를 선택하고 투어를 시작해 보세요.</Text>
+        <Text style={styles.noTourText}>
+          {'참여 중인 투어가 없어요.\n축제를 선택하고 투어를 시작해 보세요.'}
+        </Text>
       </View>
     );
   }
@@ -295,7 +297,7 @@ export default function TourMainPage() {
     <View style={styles.container}>
       {!stampTour ? (
         <View style={styles.loadingContainer}>
-          {showLoadingIndicator && <ActivityIndicator color={Colors.pink.pink50} />}
+          {showLoadingIndicator && <LoadingIndicator />}
         </View>
       ) : (
         <>
@@ -411,29 +413,24 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gray.gray00,
   },
   noTourIcon: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 4,
     borderWidth: 1,
-    borderColor: TourColors.gray50,
+    borderColor: Colors.gray.gray50,
     borderRadius: Radius.full,
   },
   noTourIconText: {
-    color: TourColors.gray50,
+    color: Colors.gray.gray50,
     fontSize: TourTypography.compact,
   },
-  noTourTitle: {
-    color: Colors.gray.gray70,
+  noTourText: {
+    color: Colors.gray.gray60,
     fontSize: FontSize.sm,
     lineHeight: FontSize.sm * 1.5,
     fontFamily: FontFamily.medium,
-  },
-  noTourDescription: {
-    color: Colors.gray.gray60,
-    fontSize: FontSize.xs,
-    lineHeight: 18,
-    fontFamily: FontFamily.regular,
+    textAlign: 'center',
   },
 });
