@@ -1,7 +1,7 @@
 import { getMyProfile, updateMyNickname, withdrawMembership } from '@/apis/members';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ErrorModal } from '@/components/common/ErrorModal';
-import { DotoBrandIcon, EditIcon } from '@/components/icons';
+import { EditIcon, ProfileEmptyIcon } from '@/components/icons';
 import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
 import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -18,7 +19,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const POLICY_ITEMS = ['이용 약관', '개인정보 취급방침'];
+const POLICY_ITEMS = [
+  { label: '이용 약관', url: 'https://doto-stamptour.notion.site/tos?source=copy_link' },
+  { label: '개인정보 취급방침', url: 'https://doto-stamptour.notion.site/privacy-policy' },
+];
 const NICKNAME_MIN_LENGTH = 2;
 const NICKNAME_MAX_LENGTH = 30;
 
@@ -176,7 +180,7 @@ export default function MyPageScreen() {
             {member?.profile_img ? (
               <Image source={{ uri: member.profile_img }} style={styles.profileImage} />
             ) : (
-              <DotoBrandIcon />
+              <ProfileEmptyIcon />
             )}
           </View>
 
@@ -234,9 +238,13 @@ export default function MyPageScreen() {
 
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>정책</Text>
-          {POLICY_ITEMS.map((item) => (
-            <Pressable key={item} style={styles.menuItem}>
-              <Text style={styles.menuText}>{item}</Text>
+          {POLICY_ITEMS.map((item, index) => (
+            <Pressable
+              key={item.label}
+              style={[styles.menuItem, index > 0 && styles.menuItemGap]}
+              onPress={() => Linking.openURL(item.url)}
+            >
+              <Text style={styles.menuText}>{item.label}</Text>
             </Pressable>
           ))}
         </View>
@@ -248,7 +256,7 @@ export default function MyPageScreen() {
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            style={styles.menuItem}
+            style={[styles.menuItem, styles.menuItemGap]}
             onPress={() => setIsWithdrawalModalVisible(true)}
           >
             <Text style={styles.withdrawalText}>회원탈퇴</Text>
@@ -310,7 +318,7 @@ const styles = StyleSheet.create({
     // Android 상단 안전영역을 포함한 피그마 프로필 위치에 맞춘 값이다.
     paddingTop: 86,
     // 피그마처럼 닉네임과 정책 섹션 사이의 여백을 유지한다.
-    paddingBottom: 56,
+    paddingBottom: 32,
     paddingHorizontal: 20,
   },
   profileImagePlaceholder: {
@@ -318,8 +326,8 @@ const styles = StyleSheet.create({
     height: 112,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 24,
-    backgroundColor: Colors.gray.gray20,
+    borderRadius: 30,
+    backgroundColor: Colors.gray.gray10,
     overflow: 'hidden',
   },
   profileImage: {
@@ -330,21 +338,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 26,
+    marginTop: 16,
   },
   nickname: {
     maxWidth: 260,
     color: Colors.gray.gray100,
     fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.md,
-    lineHeight: 24,
+    fontSize: FontSize.lg,
+    lineHeight: 30,
     textAlign: 'center',
   },
   nicknameEditRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 26,
+    marginTop: 16,
     width: '100%',
     justifyContent: 'center',
   },
@@ -382,37 +390,41 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   menuSection: {
-    borderTopWidth: 10,
+    borderTopWidth: 16,
     borderTopColor: Colors.gray.gray20,
-    paddingTop: 24,
+    paddingTop: 32,
     paddingHorizontal: 20,
     paddingBottom: 14,
   },
   accountSection: {
     borderTopWidth: 1,
     borderTopColor: Colors.gray.gray20,
+    paddingTop: 19,
   },
   sectionTitle: {
-    marginBottom: 7,
+    marginBottom: 6,
     color: Colors.gray.gray70,
-    fontFamily: FontFamily.regular,
-    fontSize: FontSize.xs,
-    lineHeight: 18,
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.sm,
+    lineHeight: 21,
   },
   menuItem: {
-    minHeight: 40,
+    minHeight: 44,
     justifyContent: 'center',
+  },
+  menuItemGap: {
+    marginTop: 8,
   },
   menuText: {
     color: Colors.gray.gray100,
     fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.sm,
-    lineHeight: 21,
+    fontSize: FontSize.md,
+    lineHeight: 24,
   },
   withdrawalText: {
     color: Colors.pink.pink50,
     fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.sm,
-    lineHeight: 21,
+    fontSize: FontSize.md,
+    lineHeight: 24,
   },
 });
