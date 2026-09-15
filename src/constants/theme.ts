@@ -29,6 +29,7 @@ export const Colors = {
   // Figma 로컬 색상 스타일(gray/pink/blue) 이름 그대로(공백만 제거) — 확인된 것만 우선 추가, 필요할 때마다 늘려갈 것
   gray: {
     gray00: '#FFFFFF',
+    gray10: '#13172A',
     gray20: '#F6F6F6',
     gray30: '#DEDEDE',
     gray60: '#BCBCBC',

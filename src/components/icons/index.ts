@@ -8,5 +8,6 @@ export * from './HistoryIcon';
 export * from './MenuIcon';
 export * from './NatureIcon';
 export * from './DotoBrandIcon';
+export * from './DotoLogoIcon';
 export * from './EditIcon';
 export * from './SocialIcons';

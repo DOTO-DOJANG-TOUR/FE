@@ -61,12 +61,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEE500',
   },
   icon: {
-    width: 22,
+    width: 24,
     alignItems: 'center',
   },
   label: {
-    color: Colors.gray.gray100,
-    fontFamily: FontFamily.semiBold,
+    color: Colors.gray.gray10,
+    fontFamily: FontFamily.medium,
     fontSize: FontSize.md,
     lineHeight: 24,
   },

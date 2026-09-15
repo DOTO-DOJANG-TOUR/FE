@@ -1,6 +1,6 @@
 import { signInWithSocialToken } from '@/apis/auth';
 import { SocialLoginButton } from '@/components/auth/SocialLoginButton';
-import { DotoBrandIcon } from '@/components/icons';
+import { DotoFlowerIcon, DotoLogoIcon } from '@/components/icons';
 import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { requestSocialIdToken } from '@/services/socialOAuth';
 import { useAuthStore } from '@/stores/authStore';
@@ -41,11 +41,13 @@ export default function LoginScreen() {
         ]}
       >
         <View style={styles.hero}>
-          <DotoBrandIcon />
+          <DotoFlowerIcon />
           <Text style={styles.title}>
             축제 관광을 <Text style={styles.highlight}>도장 투어</Text>로
           </Text>
-          <Text style={styles.logo}>DOTO</Text>
+          <View style={styles.logo} accessible accessibilityLabel="DOTO">
+            <DotoLogoIcon />
+          </View>
           <Text style={styles.description}>지금 가입하고 도투와 투어 시작해요</Text>
         </View>
 
@@ -99,7 +101,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   title: {
-    marginTop: 8,
+    marginTop: 12,
     color: Colors.gray.gray100,
     fontFamily: FontFamily.semiBold,
     fontSize: 22,
@@ -110,15 +112,10 @@ const styles = StyleSheet.create({
   },
   logo: {
     marginTop: 8,
-    color: Colors.pink.pink50,
-    fontFamily: FontFamily.bold,
-    fontSize: 36,
-    lineHeight: 37,
-    letterSpacing: -1.1,
   },
   description: {
-    marginTop: 14,
-    color: '#777777',
+    marginTop: 22,
+    color: Colors.gray.gray90,
     fontFamily: FontFamily.regular,
     fontSize: FontSize.md,
     lineHeight: 24,
