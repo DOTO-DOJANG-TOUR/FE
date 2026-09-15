@@ -285,7 +285,12 @@ export default function TourVisitPage() {
             attraction={attraction}
             expanded={expanded}
             visited={visited}
-            onClose={() => router.back()}
+            onClose={() => {
+              // 개발 중 Fast Refresh로 내비게이션 히스토리가 초기화된 경우 등
+              // 돌아갈 화면이 없을 때 GO_BACK 에러 대신 투어 메인으로 보낸다.
+              if (router.canGoBack()) router.back();
+              else router.replace('/(tabs)/tour');
+            }}
             onExpandedChange={setExpanded}
             onVisited={handleVisit}
           />
