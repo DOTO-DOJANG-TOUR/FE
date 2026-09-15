@@ -1,7 +1,7 @@
 import { DownIcon } from '@/components/icons/DownIcon';
 import { Colors, FontFamily, FontSize } from '@/constants/theme';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 type SortOption = {
     label: string;
@@ -21,9 +21,34 @@ export default function SortDropdown({
 }: Props) {
     const [isOpen, setIsOpen] = useState(false);
 
+    const buttonRef = useRef<View>(null);
+
+    const [dropdownPosition, setDropdownPosition] = useState({
+        top: 0,
+        left: 0,
+    });
+
     const selectedOption = options.find(
         (option) => option.value === value
     );
+
+    const handleOpen = () => {
+        if (isOpen) {
+            setIsOpen(false);
+            return;
+        }
+
+        buttonRef.current?.measureInWindow(
+            (x, y, width, height) => {
+                setDropdownPosition({
+                    left: x,
+                    top: y + height + 4,
+                });
+
+                setIsOpen(true);
+            }
+        );
+    };
 
     const handleSelect = (value: string) => {
         onChange(value);
@@ -33,14 +58,30 @@ export default function SortDropdown({
     return (
         <View style={styles.container}>
             <Pressable
+                ref={buttonRef}
                 style={styles.button}
-                onPress={() => setIsOpen((prev) => !prev)}
+                onPress={handleOpen}
             >
                 <Text style={styles.buttonText}>{selectedOption?.label}</Text>
                 <DownIcon />
             </Pressable>
-            {isOpen && (
-                <View style={styles.dropdown}>
+            <Modal
+                visible={isOpen}
+                transparent
+                animationType="none"
+                onRequestClose={() => setIsOpen(false)}
+            >
+                <Pressable
+                    style={styles.backdrop}
+                    onPress={() => setIsOpen(false)}
+                />
+                <View style={[
+                    styles.dropdown,
+                    {
+                        top: dropdownPosition.top,
+                        left: dropdownPosition.left,
+                    },
+                ]}>
                     {options.map((option, index) => {
                         const isLast = index === options.length - 1;
 
@@ -60,17 +101,19 @@ export default function SortDropdown({
                         );
                     })}
                 </View>
-            )}
+            </Modal>
         </View>
     )
 }
 
 const styles = StyleSheet.create({
     container: {
-        position: 'relative',
         alignSelf: 'flex-start',
         zIndex: 10,
         paddingHorizontal: 20,
+    },
+    backdrop: {
+        ...StyleSheet.absoluteFill,
     },
     button: {
         flexDirection: 'row',
@@ -90,13 +133,9 @@ const styles = StyleSheet.create({
     },
     dropdown: {
         position: 'absolute',
-        top: '100%',
-        left: 20,
         minWidth: 136,
-        marginTop: 4,
         borderRadius: 6,
         backgroundColor: Colors.gray.gray00,
-        zIndex: 10,
         elevation: 4,
         paddingHorizontal: 5,
     },
