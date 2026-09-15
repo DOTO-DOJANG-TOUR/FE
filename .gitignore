@@ -37,6 +37,9 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# AI 로컬 프리뷰 설정 (팀 저장소에 불필요)
+.claude/
+
 example
 
 # generated native folders
