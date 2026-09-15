@@ -208,12 +208,14 @@ export default function TourCheckInPage() {
         </View>
       </View>
 
+      <View style={styles.spacerAbovePin} />
       <View style={styles.illustration}>
         <VisitPinIcon />
         <View style={styles.illustrationShadow}>
           <VisitPinShadowIcon />
         </View>
       </View>
+      <View style={styles.spacerBelowPin} />
 
       <View
         style={[styles.bottomSheet, { paddingBottom: Math.max(40, insets.bottom + 14) }]}
@@ -301,14 +303,13 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.semiBold,
   },
   heading: {
-    marginTop: 3,
     color: Colors.gray.gray100,
     fontSize: 26,
     lineHeight: 26 * 1.5,
     fontFamily: FontFamily.semiBold,
   },
   description: {
-    marginTop: 21,
+    marginTop: 8,
     color: Colors.gray.gray80,
     fontSize: 16,
     lineHeight: 16 * 1.5,
@@ -329,13 +330,20 @@ const styles = StyleSheet.create({
     lineHeight: 14 * 1.5,
     fontFamily: FontFamily.semiBold,
   },
+  // 배지 하단~핀 상단(138px) : 핀 하단~버튼 영역 시작(179px) 비율(Figma 실측)을 화면 높이가
+  // 달라도 유지하기 위해 고정 여백 대신 flex 비율로 분배한다(고정값으로 두면 화면이 클수록
+  // 남는 공간이 전부 핀 아래로만 몰려 비율이 깨짐).
+  spacerAbovePin: {
+    flex: 138,
+  },
+  spacerBelowPin: {
+    flex: 179,
+  },
   illustration: {
-    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   illustrationShadow: {
-    marginTop: -14,
+    marginTop: 14,
   },
   bottomSheet: {
     paddingHorizontal: 20,
