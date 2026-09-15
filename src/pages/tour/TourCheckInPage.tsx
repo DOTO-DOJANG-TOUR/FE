@@ -14,7 +14,7 @@ import { Colors, FontFamily } from '@/constants/theme';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useTourVisitStore } from '@/stores/tourVisitStore';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -45,6 +45,8 @@ export default function TourCheckInPage() {
   const [remainingMs, setRemainingMs] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [completionRestoring, setCompletionRestoring] = useState(false);
+  const completionRestorePromiseRef = useRef<Promise<void> | null>(null);
   const [exitConfirmVisible, setExitConfirmVisible] = useState(false);
   const [tooFarVisible, setTooFarVisible] = useState(false);
   const [locationDeniedVisible, setLocationDeniedVisible] = useState(false);
@@ -54,6 +56,11 @@ export default function TourCheckInPage() {
   const navigateBack = () => {
     // 딥링크·화면 잠금 해제 직후에는 canGoBack()이 true여도 실제 back stack이 없어
     // GO_BACK 경고가 날 수 있다. 체크인 종료 지점은 항상 투어 메인으로 명시 이동한다.
+    router.replace('/(tabs)/tour');
+  };
+
+  const handleCompletedClose = async () => {
+    await completionRestorePromiseRef.current;
     router.replace('/(tabs)/tour');
   };
 
@@ -77,10 +84,10 @@ export default function TourCheckInPage() {
   // 취소·만료 등으로 다른 곳에서 활성 방문이 종료되면 화면 잠금이 풀리므로 이 화면도 빠져나간다.
   // 도장 획득 완료 화면은 예외 — 사용자가 닫기/도장 확인을 누를 때까지 유지한다.
   useEffect(() => {
-    if (completed) return;
+    if (completed || completionRestoring) return;
     if (status === 'idle') navigateBack();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, completed]);
+  }, [status, completed, completionRestoring]);
 
   const handleArrival = async () => {
     if (!festivalId || !tourSpotId) {
@@ -107,7 +114,13 @@ export default function TourCheckInPage() {
         mapY: result.coords.lat,
       });
       setCompleted(true);
-      void restore();
+      setCompletionRestoring(true);
+      const completionRestorePromise = restore().finally(() => {
+        setCompletionRestoring(false);
+        completionRestorePromiseRef.current = null;
+      });
+      completionRestorePromiseRef.current = completionRestorePromise;
+      void completionRestorePromise;
     } catch (error) {
       if (error instanceof ApiError && error.code === 'STAMP-400-001') {
         setTooFarVisible(true);
@@ -158,7 +171,11 @@ export default function TourCheckInPage() {
             { paddingBottom: Math.max(40, insets.bottom + 14) },
           ]}
         >
-          <Pressable style={styles.closeButton} onPress={navigateBack}>
+          <Pressable
+            style={[styles.closeButton, completionRestoring && styles.disabledCloseButton]}
+            disabled={completionRestoring}
+            onPress={handleCompletedClose}
+          >
             <Text style={styles.closeButtonText}>닫기</Text>
           </Pressable>
           <Pressable
@@ -421,6 +438,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 10,
     backgroundColor: Colors.gray.gray20,
+  },
+  disabledCloseButton: {
+    opacity: 0.5,
   },
   closeButtonText: {
     color: Colors.gray.gray60,
