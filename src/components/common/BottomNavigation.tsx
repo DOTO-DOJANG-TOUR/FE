@@ -70,7 +70,9 @@ export const BottomNavigation = ({
             style={styles.tab}
             onPress={handlePress}
           >
-            <Icon color={color} />
+            <View style={styles.iconBox}>
+              <Icon color={color} />
+            </View>
 
             <Text
               style={[
@@ -100,6 +102,14 @@ const styles = StyleSheet.create({
   },
   tab: {
     alignItems: 'center',
+  },
+  // StampNaviIcon(24x26)만 다른 아이콘(32x32)보다 작아서, 라벨 위치를 맞추려면
+  // 모든 아이콘을 동일한 32x32 박스 안에서 가운데 정렬해야 한다(Figma도 동일 구조).
+  iconBox: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
     fontSize: FontSize.xs,

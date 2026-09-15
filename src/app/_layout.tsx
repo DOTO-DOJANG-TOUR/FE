@@ -1,6 +1,8 @@
 import { setSessionExpiredHandler } from '@/apis/client';
 import { AuthLoadingScreen } from '@/components/auth/AuthLoadingScreen';
+import { TourVisitRestoreErrorScreen } from '@/components/tour/TourVisitRestoreErrorScreen';
 import { useAuthStore } from '@/stores/authStore';
+import { useTourVisitStore } from '@/stores/tourVisitStore';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import {
@@ -10,7 +12,7 @@ import {
   ThemeProvider,
 } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { AppState, useColorScheme } from 'react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -32,6 +34,10 @@ export default function RootLayout() {
   const initializedRef = useRef(false);
   const [minimumSplashElapsed, setMinimumSplashElapsed] = useState(false);
 
+  const tourVisitStatus = useTourVisitStore((state) => state.status);
+  const restoreTourVisit = useTourVisitStore((state) => state.restore);
+  const tourVisitRestoredRef = useRef(false);
+
   useEffect(() => {
     return setSessionExpiredHandler(() => useAuthStore.getState().expireSession());
   }, []);
@@ -49,12 +55,39 @@ export default function RootLayout() {
     return () => clearTimeout(timeout);
   }, [initialize, loaded]);
 
+  // 일반 화면을 렌더링하기 전에 활성 방문 관광지를 조회해 화면 잠금 여부를 정한다.
+  useEffect(() => {
+    if (status === 'authenticated' && !tourVisitRestoredRef.current) {
+      tourVisitRestoredRef.current = true;
+      restoreTourVisit();
+    }
+    if (status === 'unauthenticated') {
+      tourVisitRestoredRef.current = false;
+    }
+  }, [status, restoreTourVisit]);
+
+  // 앱이 포그라운드로 돌아올 때마다 활성 방문 상태를 다시 확인한다.
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') restoreTourVisit();
+    });
+    return () => subscription.remove();
+  }, [status, restoreTourVisit]);
+
   if (!loaded) {
     return null;
   }
 
-  if (!minimumSplashElapsed || status === 'initializing') {
+  const restoringTourVisit = status === 'authenticated' && tourVisitStatus === 'restoring';
+
+  if (!minimumSplashElapsed || status === 'initializing' || restoringTourVisit) {
     return <AuthLoadingScreen />;
+  }
+
+  if (status === 'authenticated' && tourVisitStatus === 'error') {
+    return <TourVisitRestoreErrorScreen onRetry={restoreTourVisit} />;
   }
 
   return (
@@ -65,12 +98,17 @@ export default function RootLayout() {
         <Stack.Protected guard={status === 'unauthenticated'}>
           <Stack.Screen name="login" />
         </Stack.Protected>
-        <Stack.Protected guard={status === 'authenticated'}>
+        <Stack.Protected
+          guard={status === 'authenticated' && tourVisitStatus !== 'active'}
+        >
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="festival-detail" />
           <Stack.Screen name="festival-search" />
           <Stack.Screen name="search" />
-          <Stack.Screen name="visit" />
+          <Stack.Screen name="visit" options={{ animation: 'fade' }} />
+        </Stack.Protected>
+        <Stack.Protected guard={status === 'authenticated'}>
+          <Stack.Screen name="check-in" />
         </Stack.Protected>
       </Stack>
     </ThemeProvider>

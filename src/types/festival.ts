@@ -5,6 +5,7 @@ export type DojangTourButtonStatus =
   | 'getReward'
   | 'alreadyRewarded'
   | 'visitAndStamp'
+  | 'arrived'
   | 'alreadyVisited'
   | 'alreadyJoinedTour'
   | 'inOtherTour'
