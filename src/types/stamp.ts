@@ -29,5 +29,6 @@ export type TourStampListResult = {
 };
 
 export type RewardQrResult = {
+  rewardCode: string;
   qrCodeImageUrl: string;
 };

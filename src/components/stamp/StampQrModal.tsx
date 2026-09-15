@@ -8,12 +8,14 @@ import { CloseIcon } from '../icons/CloseIcon';
 type Props = {
     visible: boolean;
     qrImage: string;
+    rewardCode: string;
     onClose: () => void;
 };
 
 export default function StampQrModal({
     visible,
     qrImage,
+    rewardCode,
     onClose,
 }: Props) {
     const insets = useSafeAreaInsets();
@@ -155,18 +157,16 @@ export default function StampQrModal({
                     </View>
 
                     <View style={styles.codeBox}>
-                        {['0', '5', '8', '4', '7', '1'].map(
-                            (number, index) => (
-                                <View
-                                    key={index}
-                                    style={styles.codeItem}
-                                >
-                                    <Text style={styles.codeText}>
-                                        {number}
-                                    </Text>
-                                </View>
-                            ),
-                        )}
+                        {rewardCode.split('').map((number, index) => (
+                            <View
+                                key={`${number}-${index}`}
+                                style={styles.codeItem}
+                            >
+                                <Text style={styles.codeText}>
+                                    {number}
+                                </Text>
+                            </View>
+                        ))}
                     </View>
                 </Animated.View>
             </View>

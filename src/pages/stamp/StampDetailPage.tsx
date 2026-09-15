@@ -31,6 +31,8 @@ export default function FestivalDetailPage({
     useState<MyTourStampDetail | null>(null);
 
   const [rewardQrImage, setRewardQrImage] = useState<string | null>(null);
+  const [rewardCode, setRewardCode] =
+  useState<string | null>(null);
   const [rewardModalVisible, setRewardModalVisible] = useState(false);
   const [isRewardLoading, setIsRewardLoading] = useState(false);
 
@@ -53,7 +55,11 @@ export default function FestivalDetailPage({
   }, [stampDetail?.festivalImgUrl]);
 
   if (!stampDetail) {
-    return null;
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator color={Colors.pink.pink50} />
+      </View>
+    );
   }
 
   const dojangStatus = mapStampDetailDojangStatus(
@@ -73,6 +79,7 @@ export default function FestivalDetailPage({
       const data = await getRewardQr(festivalId);
 
       setRewardQrImage(data.qrCodeImageUrl);
+      setRewardCode(data.rewardCode);
       setRewardModalVisible(true);
     } catch (error) {
       console.error('보상 QR 조회 실패:', error);
@@ -216,7 +223,9 @@ export default function FestivalDetailPage({
           paddingBottom: Math.max(40, insets.bottom + 14),
         },
       ]}>
-        {dojangStatus ? (
+        {isRewardLoading ? (
+          <ActivityIndicator color={Colors.pink.pink50} />
+        ) : dojangStatus ? (
           <DojangTourButton
             status={dojangStatus}
             onPress={() => {
@@ -226,15 +235,14 @@ export default function FestivalDetailPage({
             }}
           />
         ) : (
-          <ActivityIndicator
-            color={Colors.pink.pink50}
-          />
+          <ActivityIndicator color={Colors.pink.pink50} />
         )}
       </View>
-      {rewardQrImage && (
+      {rewardQrImage && rewardCode && (
         <StampQrModal
           visible={rewardModalVisible}
           qrImage={rewardQrImage}
+          rewardCode={rewardCode}
           onClose={() => setRewardModalVisible(false)}
         />
       )}
@@ -243,6 +251,12 @@ export default function FestivalDetailPage({
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.gray.gray00,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.gray.gray00,
