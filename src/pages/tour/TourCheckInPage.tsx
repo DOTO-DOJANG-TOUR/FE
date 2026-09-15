@@ -14,7 +14,7 @@ import { Colors, FontFamily } from '@/constants/theme';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useTourVisitStore } from '@/stores/tourVisitStore';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -45,14 +45,23 @@ export default function TourCheckInPage() {
   const [remainingMs, setRemainingMs] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [completionRestoring, setCompletionRestoring] = useState(false);
+  const completionRestorePromiseRef = useRef<Promise<void> | null>(null);
   const [exitConfirmVisible, setExitConfirmVisible] = useState(false);
   const [tooFarVisible, setTooFarVisible] = useState(false);
   const [locationDeniedVisible, setLocationDeniedVisible] = useState(false);
+  const [locationUnavailableVisible, setLocationUnavailableVisible] = useState(false);
   const [retryVisible, setRetryVisible] = useState(false);
 
   const navigateBack = () => {
-    if (router.canGoBack()) router.back();
-    else router.replace('/(tabs)/tour');
+    // 딥링크·화면 잠금 해제 직후에는 canGoBack()이 true여도 실제 back stack이 없어
+    // GO_BACK 경고가 날 수 있다. 체크인 종료 지점은 항상 투어 메인으로 명시 이동한다.
+    router.replace('/(tabs)/tour');
+  };
+
+  const handleCompletedClose = async () => {
+    await completionRestorePromiseRef.current;
+    router.replace('/(tabs)/tour');
   };
 
   // 서버가 내려준 expiresAt 기준으로 매초 다시 계산한다(로컬에서 7시간을 새로 세지 않음).
@@ -75,10 +84,10 @@ export default function TourCheckInPage() {
   // 취소·만료 등으로 다른 곳에서 활성 방문이 종료되면 화면 잠금이 풀리므로 이 화면도 빠져나간다.
   // 도장 획득 완료 화면은 예외 — 사용자가 닫기/도장 확인을 누를 때까지 유지한다.
   useEffect(() => {
-    if (completed) return;
+    if (completed || completionRestoring) return;
     if (status === 'idle') navigateBack();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, completed]);
+  }, [status, completed, completionRestoring]);
 
   const handleArrival = async () => {
     if (!festivalId || !tourSpotId) {
@@ -87,32 +96,40 @@ export default function TourCheckInPage() {
     }
 
     setSubmitting(true);
-    const result = await requestLocation();
-    if (!result.coords) {
-      setSubmitting(false);
-      if (result.permission === 'denied') {
-        setLocationDeniedVisible(true);
-      } else {
-        setRetryVisible(true);
-      }
-      return;
-    }
-
     try {
+      const result = await requestLocation();
+      if (!result.coords) {
+        if (result.permission === 'denied') {
+          setLocationDeniedVisible(true);
+        } else {
+          // 권한은 있지만 GPS가 좌표를 주지 못한 경우다. 서버 요청 실패가 아니므로
+          // 일반 "일시적인 오류"와 구분해 위치 서비스를 확인하도록 안내한다.
+          setLocationUnavailableVisible(true);
+        }
+        return;
+      }
+
       await createTourSpotStamp(festivalId, tourSpotId, {
         mapX: result.coords.lng,
         mapY: result.coords.lat,
       });
-      setSubmitting(false);
       setCompleted(true);
-      void restore();
+      setCompletionRestoring(true);
+      const completionRestorePromise = restore().finally(() => {
+        setCompletionRestoring(false);
+        completionRestorePromiseRef.current = null;
+      });
+      completionRestorePromiseRef.current = completionRestorePromise;
+      void completionRestorePromise;
     } catch (error) {
-      setSubmitting(false);
       if (error instanceof ApiError && error.code === 'STAMP-400-001') {
         setTooFarVisible(true);
         return;
       }
       setRetryVisible(true);
+    } finally {
+      // 위치 권한 요청 자체가 예외를 던져도 버튼이 영구 비활성화되지 않게 한다.
+      setSubmitting(false);
     }
   };
 
@@ -154,7 +171,11 @@ export default function TourCheckInPage() {
             { paddingBottom: Math.max(40, insets.bottom + 14) },
           ]}
         >
-          <Pressable style={styles.closeButton} onPress={navigateBack}>
+          <Pressable
+            style={[styles.closeButton, completionRestoring && styles.disabledCloseButton]}
+            disabled={completionRestoring}
+            onPress={handleCompletedClose}
+          >
             <Text style={styles.closeButtonText}>닫기</Text>
           </Pressable>
           <Pressable
@@ -258,6 +279,16 @@ export default function TourCheckInPage() {
           setLocationDeniedVisible(false);
           Linking.openSettings();
         }}
+      />
+
+      <AlertModal
+        visible={locationUnavailableVisible}
+        title="현재 위치를 확인할 수 없어요"
+        description={'기기 위치 서비스를 켜거나 위치를 설정한 후\n다시 시도해 주세요.'}
+        confirmText="확인"
+        confirmTextColor={Colors.blue.blue30}
+        onClose={() => setLocationUnavailableVisible(false)}
+        onConfirm={() => setLocationUnavailableVisible(false)}
       />
 
       <ErrorModal
@@ -407,6 +438,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 10,
     backgroundColor: Colors.gray.gray20,
+  },
+  disabledCloseButton: {
+    opacity: 0.5,
   },
   closeButtonText: {
     color: Colors.gray.gray60,
