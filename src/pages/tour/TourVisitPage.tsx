@@ -286,10 +286,11 @@ export default function TourVisitPage() {
             expanded={expanded}
             visited={visited}
             onClose={() => {
-              // 개발 중 Fast Refresh로 내비게이션 히스토리가 초기화된 경우 등
-              // 돌아갈 화면이 없을 때 GO_BACK 에러 대신 투어 메인으로 보낸다.
-              if (router.canGoBack()) router.back();
-              else router.replace('/(tabs)/tour');
+              // router.canGoBack()이 true를 반환해도 실제 back()이 처리되지 않아
+              // GO_BACK 에러가 나는 경우가 있어(#53), 뒤로가기 대신 투어 메인으로
+              // 명시적으로 이동한다. 검색 결과에서 들어온 경우에도 동일하게 투어
+              // 메인으로 닫힌다(검색 상태는 보존되지 않음).
+              router.replace('/(tabs)/tour');
             }}
             onExpandedChange={setExpanded}
             onVisited={handleVisit}
