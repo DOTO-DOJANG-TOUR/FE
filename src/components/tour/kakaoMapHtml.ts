@@ -34,16 +34,22 @@ export function getKakaoMapHtml(javascriptKey: string): string {
 </head>
 <body>
 <div id="map"></div>
-<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=${javascriptKey}&autoload=false"></script>
 <script>
   function post(message) {
     if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(message));
   }
 
+  // window.onerror는 런타임 JS 예외만 잡고 <script src> 자체의 네트워크 로드 실패는
+  // 잡지 못한다(JS 스펙상 한계). 아래 SDK <script> 태그의 onerror 속성으로 로드 실패를 별도로 잡는다.
   window.onerror = function (message) {
     post({ type: 'error', message: String(message) });
   };
-
+</script>
+<script
+  src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=${javascriptKey}&autoload=false"
+  onerror="post({ type: 'error', message: 'Kakao Maps SDK 스크립트 로드 실패' })"
+></script>
+<script>
   // Figma 마커 아이콘(marker/culture, marker/history, marker/nature, marker/activity)의
   // path만 추출해서 씀 — 테두리·배경 원은 .doto-marker-pin/.doto-marker-pin-inner CSS로 그린다.
   var CATEGORY_ICON_PATHS = {
