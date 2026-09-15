@@ -35,9 +35,38 @@ export function getKakaoMapHtml(javascriptKey: string): string {
 <body>
 <div id="map"></div>
 <script>
-  function post(message) {
-    if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(message));
+  var pendingMessages = [];
+  var bridgeRetryTimer = null;
+
+  function flushPendingMessages() {
+    if (!window.ReactNativeWebView || !window.ReactNativeWebView.postMessage) return;
+
+    pendingMessages.forEach(function (message) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(message));
+    });
+    pendingMessages = [];
+
+    if (bridgeRetryTimer !== null) {
+      clearInterval(bridgeRetryTimer);
+      bridgeRetryTimer = null;
+    }
   }
+
+  function post(message) {
+    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(message));
+      return;
+    }
+
+    // Release APK에서는 HTML 실행 시점보다 RN 메시지 브리지가 늦게 준비될 수 있다.
+    // 이때 ready를 버리지 않고 보관했다가 브리지가 생기면 순서대로 전달한다.
+    pendingMessages.push(message);
+    if (bridgeRetryTimer === null) {
+      bridgeRetryTimer = setInterval(flushPendingMessages, 50);
+    }
+  }
+
+  post({ type: 'stage', stage: 'html-booted' });
 
   // window.onerror는 런타임 JS 예외만 잡고 <script src> 자체의 네트워크 로드 실패는
   // 잡지 못한다(JS 스펙상 한계). 아래 SDK <script> 태그의 onerror 속성으로 로드 실패를 별도로 잡는다.
@@ -47,6 +76,7 @@ export function getKakaoMapHtml(javascriptKey: string): string {
 </script>
 <script
   src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=${javascriptKey}&autoload=false"
+  onload="post({ type: 'stage', stage: 'sdk-loaded' })"
   onerror="post({ type: 'error', message: 'Kakao Maps SDK 스크립트 로드 실패' })"
 ></script>
 <script>
@@ -67,11 +97,16 @@ export function getKakaoMapHtml(javascriptKey: string): string {
     experience: 'M12.24 18.1714L10.24 16.0286C10.08 15.8571 10 15.6571 10 15.4286C10 15.2 10.08 15 10.24 14.8286L12.24 12.6857C12.4 12.5143 12.5867 12.4286 12.8 12.4286C13.0133 12.4286 13.2 12.5143 13.36 12.6857L15.36 14.8286C15.52 15 15.6 15.2 15.6 15.4286C15.6 15.6571 15.52 15.8571 15.36 16.0286L13.36 18.1714C13.2 18.3429 13.0133 18.4286 12.8 18.4286C12.5867 18.4286 12.4 18.3429 12.24 18.1714ZM16.4 27C16.1733 27 15.9835 26.9177 15.8304 26.7531C15.6773 26.5886 15.6005 26.3851 15.6 26.1429V22.7143C14.9333 22.6571 14.2733 22.5786 13.62 22.4786C12.9667 22.3786 12.3133 22.25 11.66 22.0929C11.4333 22.0357 11.2501 21.9 11.1104 21.6857C10.9707 21.4714 10.9339 21.2429 11 21C11.0661 20.7571 11.2029 20.5786 11.4104 20.4643C11.6179 20.35 11.8344 20.3214 12.06 20.3786C13.0333 20.6214 14.0168 20.7857 15.0104 20.8714C16.004 20.9571 17.0005 21 18 21C18.9995 21 19.9963 20.9571 20.9904 20.8714C21.9845 20.7857 22.9677 20.6214 23.94 20.3786C24.1667 20.3214 24.3835 20.35 24.5904 20.4643C24.7973 20.5786 24.9339 20.7571 25 21C25.0661 21.2429 25.0296 21.4714 24.8904 21.6857C24.7512 21.9 24.5677 22.0357 24.34 22.0929C23.6867 22.25 23.0333 22.3786 22.38 22.4786C21.7267 22.5786 21.0667 22.6571 20.4 22.7143V26.1429C20.4 26.3857 20.3235 26.5894 20.1704 26.754C20.0173 26.9186 19.8272 27.0006 19.6 27H16.4ZM16.3 13.3929C15.8333 12.8929 15.6 12.2857 15.6 11.5714C15.6 10.8571 15.8333 10.25 16.3 9.75C16.7667 9.25 17.3333 9 18 9C18.6667 9 19.2333 9.25 19.7 9.75C20.1667 10.25 20.4 10.8571 20.4 11.5714C20.4 12.2857 20.1667 12.8929 19.7 13.3929C19.2333 13.8929 18.6667 14.1429 18 14.1429C17.3333 14.1429 16.7667 13.8929 16.3 13.3929ZM16.8704 19.6397C16.5568 19.3037 16.4 18.9 16.4 18.4286C16.4 17.9571 16.5568 17.5537 16.8704 17.2183C17.184 16.8829 17.5605 16.7149 18 16.7143C18.4395 16.7137 18.8163 16.8817 19.1304 17.2183C19.4445 17.5549 19.6011 17.9583 19.6 18.4286C19.5989 18.8989 19.4424 19.3026 19.1304 19.6397C18.8184 19.9769 18.4416 20.1446 18 20.1429C17.5584 20.1411 17.1819 19.9734 16.8704 19.6397ZM21.82 18L20.9 16.2857C20.8333 16.1571 20.8 16.0143 20.8 15.8571C20.8 15.7 20.8333 15.5571 20.9 15.4286L21.82 13.7143C21.8867 13.5714 21.98 13.4643 22.1 13.3929C22.22 13.3214 22.3533 13.2857 22.5 13.2857H24.3C24.4467 13.2857 24.58 13.3214 24.7 13.3929C24.82 13.4643 24.9133 13.5714 24.98 13.7143L25.9 15.4286C25.9667 15.5571 26 15.7 26 15.8571C26 16.0143 25.9667 16.1571 25.9 16.2857L24.98 18C24.9133 18.1429 24.82 18.25 24.7 18.3214C24.58 18.3929 24.4467 18.4286 24.3 18.4286H22.5C22.3533 18.4286 22.22 18.3929 22.1 18.3214C21.98 18.25 21.8867 18.1429 21.82 18Z',
   };
 
+  post({ type: 'stage', stage: 'sdk-executed' });
+
   kakao.maps.load(function () {
+    post({ type: 'stage', stage: 'maps-load-callback' });
+
     var map = new kakao.maps.Map(document.getElementById('map'), {
       center: new kakao.maps.LatLng(37.5665, 126.978),
       level: 6,
     });
+    post({ type: 'stage', stage: 'map-created' });
 
     var markerOverlays = {};
     var currentLocationOverlay = null;
