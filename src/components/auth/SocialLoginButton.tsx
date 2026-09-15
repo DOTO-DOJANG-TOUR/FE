@@ -61,12 +61,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEE500',
   },
   icon: {
-    width: 22,
+    width: 24,
     alignItems: 'center',
   },
   label: {
-    color: Colors.gray.gray100,
-    fontFamily: FontFamily.semiBold,
+    // Figma "Gray/gray-10"(#13172A) — gray00~100 스케일과는 다른 별도 색상 그룹이라 토큰화하지 않음
+    color: '#13172A',
+    fontFamily: FontFamily.medium,
     fontSize: FontSize.md,
     lineHeight: 24,
   },
