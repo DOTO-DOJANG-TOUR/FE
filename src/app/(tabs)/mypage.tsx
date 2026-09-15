@@ -1,6 +1,7 @@
 import { getMyProfile, withdrawMembership } from '@/apis/members';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ErrorModal } from '@/components/common/ErrorModal';
+import { LoadingIndicator } from '@/components/common/LoadingIndicator';
 import { ProfileEmptyIcon } from '@/components/icons';
 import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
@@ -8,7 +9,6 @@ import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import type { Member } from '@/types/auth';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   Linking,
   Pressable,
@@ -121,7 +121,7 @@ export default function MyPageScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.centerContainer}>
-          <ActivityIndicator color={Colors.pink.pink50} />
+          <LoadingIndicator />
         </View>
       </SafeAreaView>
     );
