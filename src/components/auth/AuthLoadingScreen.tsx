@@ -1,6 +1,6 @@
-import { Colors, FontFamily, FontSize } from '@/constants/theme';
+import { DotoLogoIcon } from '@/components/icons';
+import { FontFamily, FontSize, Colors } from '@/constants/theme';
 import {
-  ActivityIndicator,
   Platform,
   StyleSheet,
   Text,
@@ -21,10 +21,11 @@ export function AuthLoadingScreen() {
         ]}
       >
         <View style={styles.center}>
-          <Text style={styles.logo}>DOTO</Text>
-          <Text style={styles.tagline}>축제 관광을 도장 투어로</Text>
+          <DotoLogoIcon width={127} height={37} />
+          <Text style={styles.tagline}>
+            축제 관광을 <Text style={styles.taglineHighlight}>도장 투어</Text>로
+          </Text>
         </View>
-        <ActivityIndicator style={styles.indicator} color={Colors.pink.pink40} />
       </View>
     </SafeAreaView>
   );
@@ -54,23 +55,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logo: {
-    color: Colors.pink.pink50,
-    fontFamily: FontFamily.bold,
-    fontSize: 37,
-    lineHeight: 44,
-    letterSpacing: -1.1,
-  },
   tagline: {
     marginTop: 10,
-    color: Colors.gray.gray100,
-    fontFamily: FontFamily.bold,
+    color: Colors.pink.pink50,
+    fontFamily: FontFamily.regular,
     fontSize: FontSize.sm,
     lineHeight: 21,
   },
-  indicator: {
-    position: 'absolute',
-    bottom: 42,
-    alignSelf: 'center',
+  taglineHighlight: {
+    fontFamily: FontFamily.semiBold,
   },
 });

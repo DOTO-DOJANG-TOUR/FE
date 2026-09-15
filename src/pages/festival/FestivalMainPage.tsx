@@ -14,6 +14,7 @@ import FestivalMainTitle from "@/components/festival/main/FestivalMainTitle";
 import RegionCategoryCard from "@/components/festival/main/RegionCategoryCard";
 import TodayFestivalCard from "@/components/festival/main/TodayFestivalCard";
 import UpcomingFestivalCard from '@/components/festival/main/UpcomingFestivalCard';
+import { LoadingIndicator } from '@/components/common/LoadingIndicator';
 import { EmptyIcon } from '@/components/icons/EmptyIcon';
 import { Colors, FontFamily, FontSize, Spacing } from "@/constants/theme";
 import { Festival } from '@/types/festival';
@@ -308,7 +309,7 @@ export const FestivalMainPage = () => {
     if (isLoading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator color={Colors.pink.pink50} />
+                <LoadingIndicator />
             </View>
         );
     }

@@ -1,9 +1,14 @@
 import { Colors } from '@/constants/theme';
 import Svg, { Path } from 'react-native-svg';
 
-export function DotoLogoIcon() {
+type Props = {
+  width?: number;
+  height?: number;
+};
+
+export function DotoLogoIcon({ width = 100, height = 29 }: Props) {
   return (
-    <Svg width={100} height={29} viewBox="0 0 100 29" fill="none">
+    <Svg width={width} height={height} viewBox="0 0 100 29" fill="none">
       <Path
         d="M87.1376 29C79.2466 29 74.5514 23.5575 74.5514 14.6986C74.5514 5.60137 79.365 0 87.4138 0C95.3048 0 100 5.44247 100 14.3014C100 23.3986 95.1865 29 87.1376 29ZM87.2165 23.5575C91.5566 23.5575 93.8845 20.3795 93.8845 14.4603C93.8845 8.54109 91.5961 5.40274 87.3349 5.40274C82.9948 5.40274 80.667 8.62055 80.667 14.5397C80.667 20.4192 82.9554 23.5575 87.2165 23.5575Z"
         fill={Colors.pink.pink50}

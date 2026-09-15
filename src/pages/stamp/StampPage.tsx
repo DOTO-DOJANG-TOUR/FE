@@ -1,5 +1,6 @@
 import { getMyStamps } from "@/apis/stamp";
 import FestivalMainTitle from "@/components/festival/main/FestivalMainTitle";
+import { LoadingIndicator } from "@/components/common/LoadingIndicator";
 import { EmptyIcon } from "@/components/icons/EmptyIcon";
 import { InfoIcon } from "@/components/icons/InfoIcon";
 import StampItemCard from "@/components/stamp/StampItemCard";
@@ -7,7 +8,7 @@ import { Colors, FontFamily, FontSize, Spacing } from "@/constants/theme";
 import { TourStampListResult } from "@/types/stamp";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function StampPage() {
@@ -37,7 +38,11 @@ export default function StampPage() {
     );
 
     if (isLoading) {
-        return <ActivityIndicator />;
+        return (
+            <View style={styles.loadingContainer}>
+                <LoadingIndicator />
+            </View>
+        );
     }
 
     return (
@@ -98,6 +103,12 @@ export default function StampPage() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: Colors.gray.gray00,
+    },
+    loadingContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: Colors.gray.gray00,
     },
     rewardInfoBox: {

@@ -4,6 +4,7 @@ import { TourColors } from '@/constants/tourTheme';
 import type { TourCategory } from '@/types/tour';
 import {
   forwardRef,
+  type ComponentProps,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -48,6 +49,8 @@ type Props = {
   onMarkerPress?: (markerId: string) => void;
 };
 
+type WebViewProps = ComponentProps<typeof WebView>;
+
 export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
   {
     markers,
@@ -63,17 +66,22 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
 ) {
   const webViewRef = useRef<WebView>(null);
   const isReadyRef = useRef(false);
+  const lastLoadStageRef = useRef('not-started');
   const pendingCommandsRef = useRef<string[]>([]);
   const [isReady, setIsReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
 
   const html = useMemo(() => getKakaoMapHtml(KAKAO_JAVASCRIPT_KEY ?? ''), []);
+  const webViewSource = useMemo(() => ({ html, baseUrl: 'http://localhost' }), [html]);
 
   useEffect(() => {
     if (isReady || loadError) return;
 
-    const timer = setTimeout(() => setLoadError(true), MAP_READY_TIMEOUT_MS);
+    const timer = setTimeout(() => {
+      console.error(`[TourMap] 지도 준비 시간 초과 (lastStage=${lastLoadStageRef.current})`);
+      setLoadError(true);
+    }, MAP_READY_TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, [loadAttempt, isReady, loadError]);
 
@@ -124,6 +132,7 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
       const message = JSON.parse(event.nativeEvent.data);
 
       if (message.type === 'ready') {
+        lastLoadStageRef.current = 'ready';
         isReadyRef.current = true;
         setIsReady(true);
 
@@ -131,6 +140,12 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
           webViewRef.current?.injectJavaScript(`${js} true;`);
         });
         pendingCommandsRef.current = [];
+        return;
+      }
+
+      if (message.type === 'stage') {
+        lastLoadStageRef.current = message.stage;
+        console.info(`[TourMap] WebView stage: ${message.stage}`);
         return;
       }
 
@@ -153,21 +168,54 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
   const handleRetry = () => {
     setLoadError(false);
     isReadyRef.current = false;
+    lastLoadStageRef.current = 'retrying';
     pendingCommandsRef.current = [];
     setIsReady(false);
     setLoadAttempt((prev) => prev + 1);
-    webViewRef.current?.reload();
+  };
+
+  const handleLoadStart: NonNullable<WebViewProps['onLoadStart']> = (event) => {
+    lastLoadStageRef.current = 'document-loading';
+    console.info(`[TourMap] WebView load started: ${event.nativeEvent.url}`);
+  };
+
+  const handleLoadEnd: NonNullable<WebViewProps['onLoadEnd']> = (event) => {
+    console.info(`[TourMap] WebView load ended: ${event.nativeEvent.url}`);
+  };
+
+  const handleWebViewError: NonNullable<WebViewProps['onError']> = (event) => {
+    const { code, description, url } = event.nativeEvent;
+    lastLoadStageRef.current = 'document-error';
+    console.error(`[TourMap] WebView load error (${code}): ${description} (${url})`);
+    setLoadError(true);
+  };
+
+  const handleHttpError: NonNullable<WebViewProps['onHttpError']> = (event) => {
+    const { description, statusCode, url } = event.nativeEvent;
+    console.error(`[TourMap] WebView HTTP error (${statusCode}): ${description} (${url})`);
+  };
+
+  const handleRenderProcessGone: NonNullable<WebViewProps['onRenderProcessGone']> = (event) => {
+    lastLoadStageRef.current = 'render-process-gone';
+    console.error(`[TourMap] WebView render process terminated (didCrash=${event.nativeEvent.didCrash})`);
+    setLoadError(true);
   };
 
   return (
     <View style={StyleSheet.absoluteFill}>
       <WebView
+        key={loadAttempt}
         ref={webViewRef}
         style={StyleSheet.absoluteFill}
-        source={{ html, baseUrl: 'http://localhost' }}
+        source={webViewSource}
         originWhitelist={['*']}
         javaScriptEnabled
         domStorageEnabled
+        onLoadStart={handleLoadStart}
+        onLoadEnd={handleLoadEnd}
+        onError={handleWebViewError}
+        onHttpError={handleHttpError}
+        onRenderProcessGone={handleRenderProcessGone}
         onMessage={handleMessage}
       />
 

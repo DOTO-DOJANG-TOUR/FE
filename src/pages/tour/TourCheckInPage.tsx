@@ -22,7 +22,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const STAMP_DETAIL_ROUTE_AVAILABLE = false;
 
 function formatCountdown(remainingMs: number) {
-  const totalSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+  // 남은 시간이 실제로 만료되기 전에 00:00:00이 먼저 표시되지 않도록 올림한다.
+  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
@@ -47,6 +48,7 @@ export default function TourCheckInPage() {
   const [completed, setCompleted] = useState(false);
   const [completionRestoring, setCompletionRestoring] = useState(false);
   const completionRestorePromiseRef = useRef<Promise<void> | null>(null);
+  const expirationHandledRef = useRef(false);
   const [exitConfirmVisible, setExitConfirmVisible] = useState(false);
   const [tooFarVisible, setTooFarVisible] = useState(false);
   const [locationDeniedVisible, setLocationDeniedVisible] = useState(false);
@@ -68,23 +70,41 @@ export default function TourCheckInPage() {
   useEffect(() => {
     if (!expiresAt || completed) return;
 
+    expirationHandledRef.current = false;
+
+    const handleExpiration = async () => {
+      // 모달 뒤에서도 타이머는 절대 만료시각을 기준으로 흐른다. 만료 시 열린 모달을
+      // 모두 닫고 서버 상태 복원이 끝난 뒤 체크인 화면을 강제로 종료한다.
+      setExitConfirmVisible(false);
+      setTooFarVisible(false);
+      setLocationDeniedVisible(false);
+      setLocationUnavailableVisible(false);
+      setRetryVisible(false);
+      setSubmitting(false);
+
+      await restore();
+      router.replace('/(tabs)/tour');
+    };
+
     const tick = () => {
       const remaining = new Date(expiresAt).getTime() - Date.now();
-      setRemainingMs(remaining);
-      if (remaining <= 0) {
-        void restore();
+      setRemainingMs(Math.max(0, remaining));
+
+      if (remaining <= 0 && !expirationHandledRef.current) {
+        expirationHandledRef.current = true;
+        void handleExpiration();
       }
     };
 
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [expiresAt, completed, restore]);
+  }, [expiresAt, completed, restore, router]);
 
   // 취소·만료 등으로 다른 곳에서 활성 방문이 종료되면 화면 잠금이 풀리므로 이 화면도 빠져나간다.
   // 도장 획득 완료 화면은 예외 — 사용자가 닫기/도장 확인을 누를 때까지 유지한다.
   useEffect(() => {
-    if (completed || completionRestoring) return;
+    if (completed || completionRestoring || expirationHandledRef.current) return;
     if (status === 'idle') navigateBack();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, completed, completionRestoring]);

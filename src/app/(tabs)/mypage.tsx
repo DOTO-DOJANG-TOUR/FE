@@ -1,20 +1,19 @@
-import { getMyProfile, updateMyNickname, withdrawMembership } from '@/apis/members';
+import { getMyProfile, withdrawMembership } from '@/apis/members';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ErrorModal } from '@/components/common/ErrorModal';
-import { EditIcon, ProfileEmptyIcon } from '@/components/icons';
+import { LoadingIndicator } from '@/components/common/LoadingIndicator';
+import { ProfileEmptyIcon } from '@/components/icons';
 import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
 import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import type { Member } from '@/types/auth';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   Linking,
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,8 +22,6 @@ const POLICY_ITEMS = [
   { label: '이용 약관', url: 'https://doto-stamptour.notion.site/tos?source=copy_link' },
   { label: '개인정보 취급방침', url: 'https://doto-stamptour.notion.site/privacy-policy' },
 ];
-const NICKNAME_MIN_LENGTH = 2;
-const NICKNAME_MAX_LENGTH = 30;
 
 export default function MyPageScreen() {
   const authUser = useAuthStore((state) => state.user);
@@ -33,11 +30,6 @@ export default function MyPageScreen() {
   const [member, setMember] = useState<Member | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [reloadTrigger, setReloadTrigger] = useState(0);
-
-  const [isEditingNickname, setIsEditingNickname] = useState(false);
-  const [nicknameDraft, setNicknameDraft] = useState('');
-  const [isSavingNickname, setIsSavingNickname] = useState(false);
-  const [nicknameError, setNicknameError] = useState<string | null>(null);
 
   const [isWithdrawalModalVisible, setIsWithdrawalModalVisible] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -93,50 +85,6 @@ export default function MyPageScreen() {
     };
   }, [reloadTrigger]);
 
-  const startEditingNickname = () => {
-    setNicknameDraft(nickname);
-    setNicknameError(null);
-    setIsEditingNickname(true);
-  };
-
-  const cancelEditingNickname = () => {
-    setIsEditingNickname(false);
-    setNicknameError(null);
-  };
-
-  const submitNickname = async () => {
-    const trimmed = nicknameDraft.trim();
-
-    if (trimmed.length < NICKNAME_MIN_LENGTH || trimmed.length > NICKNAME_MAX_LENGTH) {
-      setNicknameError(
-        `닉네임은 ${NICKNAME_MIN_LENGTH}자 이상 ${NICKNAME_MAX_LENGTH}자 이하여야 해요.`,
-      );
-      return;
-    }
-
-    try {
-      setIsSavingNickname(true);
-      setNicknameError(null);
-      const result = await updateMyNickname(trimmed);
-      setMember((prev) => (prev ? { ...prev, nickname: result.nickname } : prev));
-      setIsEditingNickname(false);
-    } catch (error) {
-      console.error('닉네임 수정 실패:', error);
-      if (isRetryableError(error)) {
-        setFailedRequest({
-          retry: submitNickname,
-          isOffline: error instanceof NetworkOfflineError,
-        });
-      } else {
-        setNicknameError(
-          error instanceof ApiError ? error.message : '닉네임 수정에 실패했어요.',
-        );
-      }
-    } finally {
-      setIsSavingNickname(false);
-    }
-  };
-
   const confirmWithdrawal = async () => {
     try {
       setIsWithdrawing(true);
@@ -173,7 +121,7 @@ export default function MyPageScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.centerContainer}>
-          <ActivityIndicator color={Colors.pink.pink50} />
+          <LoadingIndicator />
         </View>
       </SafeAreaView>
     );
@@ -195,56 +143,9 @@ export default function MyPageScreen() {
             )}
           </View>
 
-          {isEditingNickname ? (
-            <View style={styles.nicknameEditRow}>
-              <TextInput
-                // 한글처럼 여러 키를 조합해 완성되는 입력은, value로 매 키 입력마다
-                // 리렌더링하면 조합 중이던 문자가 끊겨서 완성되지 않는다(영문/기호는
-                // 조합 과정 없이 바로 확정되므로 문제가 없었다). 그래서 value로 강제
-                // 제어하지 않고 defaultValue + onChangeText만으로 값을 추적한다.
-                defaultValue={nicknameDraft}
-                onChangeText={setNicknameDraft}
-                style={styles.nicknameInput}
-                maxLength={NICKNAME_MAX_LENGTH}
-                autoFocus
-                editable={!isSavingNickname}
-                onSubmitEditing={submitNickname}
-                returnKeyType="done"
-              />
-              <Pressable
-                style={styles.nicknameActionButton}
-                onPress={submitNickname}
-                disabled={isSavingNickname}
-              >
-                {isSavingNickname ? (
-                  <ActivityIndicator size="small" color={Colors.pink.pink50} />
-                ) : (
-                  <Text style={styles.nicknameActionText}>완료</Text>
-                )}
-              </Pressable>
-              <Pressable
-                style={styles.nicknameActionButton}
-                onPress={cancelEditingNickname}
-                disabled={isSavingNickname}
-              >
-                <Text style={styles.nicknameCancelText}>취소</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={styles.nicknameRow}>
-              <Text numberOfLines={2} ellipsizeMode="tail" style={styles.nickname}>
-                {nickname}
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                hitSlop={8}
-                onPress={startEditingNickname}
-              >
-                <EditIcon color={Colors.gray.gray70} />
-              </Pressable>
-            </View>
-          )}
-          {nicknameError && <Text style={styles.nicknameErrorText}>{nicknameError}</Text>}
+          <Text numberOfLines={2} ellipsizeMode="tail" style={styles.nickname}>
+            {nickname}
+          </Text>
         </View>
 
         <View style={styles.menuSection}>
@@ -345,59 +246,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  nicknameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 16,
-  },
   nickname: {
+    marginTop: 16,
     maxWidth: 260,
     color: Colors.gray.gray100,
     fontFamily: FontFamily.semiBold,
     fontSize: FontSize.lg,
     lineHeight: 30,
-    textAlign: 'center',
-  },
-  nicknameEditRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 16,
-    width: '100%',
-    justifyContent: 'center',
-  },
-  nicknameInput: {
-    minWidth: 140,
-    maxWidth: 180,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.gray.gray60,
-    color: Colors.gray.gray100,
-    fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.md,
-  },
-  nicknameActionButton: {
-    paddingHorizontal: 6,
-    paddingVertical: 6,
-  },
-  nicknameActionText: {
-    color: Colors.pink.pink50,
-    fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.sm,
-  },
-  nicknameCancelText: {
-    color: Colors.gray.gray70,
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.sm,
-  },
-  nicknameErrorText: {
-    marginTop: 8,
-    color: Colors.pink.pink50,
-    fontFamily: FontFamily.regular,
-    fontSize: FontSize.xs,
     textAlign: 'center',
   },
   menuSection: {
