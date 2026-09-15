@@ -1,6 +1,9 @@
 export type DojangTourButtonStatus =
   | 'start'
   | 'stop'
+  | 'stillProgress'
+  | 'getReward'
+  | 'alreadyRewarded'
   | 'visitAndStamp'
   | 'arrived'
   | 'alreadyVisited'

@@ -1,4 +1,5 @@
-import type { StampTourDetail } from "@/types/tour";
+import { MyTourStampDetail, RewardQrResult, TourStampListResult } from "@/types/stamp";
+import { StampTourDetail } from "@/types/tour";
 import { apiFetch } from "./client";
 
 // festivalId 없이 로그인한 사용자의 현재 진행 중인(PROGRESS) 스탬프 투어를 조회한다.
@@ -26,5 +27,31 @@ export const stopStampTour = async (
     {
       method: 'DELETE',
     },
+  );
+};
+
+export const getMyStamps = async (): Promise<TourStampListResult> => {
+  const response = await apiFetch<TourStampListResult>(
+    `/api/v1/stamps/my-tours`
+  );
+
+  return response;
+}
+
+export const getMyStampsDetail = async (
+  festivalId: string,
+): Promise<MyTourStampDetail> => {
+  const response = await apiFetch<MyTourStampDetail>(
+    `/api/v1/stamps/my-tours/${festivalId}`
+  );
+
+  return response;
+}
+
+export const getRewardQr = async (
+  festivalId: string,
+): Promise<RewardQrResult> => {
+  return apiFetch<RewardQrResult>(
+    `/api/v1/stamps/my-tours/${festivalId}/qr-code`,
   );
 };

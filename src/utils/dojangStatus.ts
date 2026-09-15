@@ -21,3 +21,30 @@ export const mapDojangTourStatus = (
             return 'alreadyEnded';
     }
 }
+
+export const mapStampDetailDojangStatus = (
+  status: DojangTourStatus,
+  stampCount: number,
+): DojangTourButtonStatus => {
+  switch (status) {
+    case 'PROGRESS':
+      return stampCount >= 3
+        ? 'getReward'
+        : 'stillProgress';
+
+    case 'NOT_STARTED':
+      return 'start';
+
+    case 'REWARDED':
+        return 'alreadyRewarded';
+        
+    case 'COMPLETED':
+      return 'alreadyJoinedTour';
+
+    case 'PARTICIPATING_IN_ANOTHER_TOUR':
+      return 'inOtherTour';
+
+    case 'FESTIVAL_ENDED':
+      return 'alreadyEnded';
+  }
+};
