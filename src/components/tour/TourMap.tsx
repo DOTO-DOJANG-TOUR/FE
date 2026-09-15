@@ -17,6 +17,9 @@ import { CurrentLocationIcon } from './TourIcons';
 
 const KAKAO_JAVASCRIPT_KEY = process.env.EXPO_PUBLIC_KAKAO_JAVASCRIPT_KEY;
 const DEFAULT_MARKER_FOCUS_LEVEL = 3;
+// SDK 스크립트 자체가 네트워크 레벨에서 조용히 실패하면(에러 이벤트도 못 잡는 경우가 있음)
+// ready도 error도 영영 안 와서 로딩 스피너가 무한히 떠 있을 수 있다 — 그걸 막기 위한 타임아웃.
+const MAP_READY_TIMEOUT_MS = 10000;
 
 export type TourMapMarker = {
   // 클릭 시 이동할 대표 관광지 id(좌표가 겹치는 그룹이면 그중 첫 번째).
@@ -63,8 +66,16 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
   const pendingCommandsRef = useRef<string[]>([]);
   const [isReady, setIsReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   const html = useMemo(() => getKakaoMapHtml(KAKAO_JAVASCRIPT_KEY ?? ''), []);
+
+  useEffect(() => {
+    if (isReady || loadError) return;
+
+    const timer = setTimeout(() => setLoadError(true), MAP_READY_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [loadAttempt, isReady, loadError]);
 
   const runInWebView = (js: string) => {
     if (isReadyRef.current) {
@@ -144,6 +155,7 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
     isReadyRef.current = false;
     pendingCommandsRef.current = [];
     setIsReady(false);
+    setLoadAttempt((prev) => prev + 1);
     webViewRef.current?.reload();
   };
 
