@@ -389,7 +389,12 @@ export const FestivalMainPage = () => {
                         subtitle="전국 축제 정보"
                         title="지역별로 탐색하기"
                     />
-                    <View style={[styles.list, styles.horizontalPadding]}>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.list}
+                        contentContainerStyle={styles.regionScrollContent}
+                    >
                         <View style={styles.regionSection}>
                             {regionCategories.map((item) => (
                                 <RegionCategoryCard
@@ -409,7 +414,7 @@ export const FestivalMainPage = () => {
                                 />
                             ))}
                         </View>
-                    </View>
+                    </ScrollView>
                 </View>
                 <View style={styles.festivalSection}>
                     <FestivalMainTitle
@@ -515,7 +520,13 @@ const styles = StyleSheet.create({
         lineHeight: FontSize.sm * 1.5,
         color: Colors.gray.gray60,
     },
+    regionScrollContent: {
+        flexGrow: 1,
+        paddingHorizontal: 20,
+        justifyContent: 'center',
+    },
     regionSection: {
+        width: 354,
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
