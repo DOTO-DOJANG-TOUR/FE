@@ -42,6 +42,10 @@ export default function MyPageScreen() {
   const [isWithdrawalModalVisible, setIsWithdrawalModalVisible] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
+  // 서버가 내려준 profile_img가 있어도 실제 로드가 실패하면(카카오 기본 이미지 URL 만료 등)
+  // 빈 화면 대신 기본 아이콘으로 대체하기 위한 상태.
+  const [profileImageFailed, setProfileImageFailed] = useState(false);
+
   // 서버가 내려준 4xx 메시지를 그대로 보여주는 용도(재시도 대상 아님)
   const [infoError, setInfoError] = useState<string | null>(null);
   // 재시도 버튼을 누르면 실패했던 요청을 그대로 다시 실행한다(오프라인/5xx/타임아웃 등).
@@ -59,7 +63,10 @@ export default function MyPageScreen() {
       try {
         setIsLoading(true);
         const result = await getMyProfile();
-        if (isMounted) setMember(result);
+        if (isMounted) {
+          setMember(result);
+          setProfileImageFailed(false);
+        }
       } catch (error) {
         console.error('내 정보 조회 실패:', error);
         if (isMounted) {
@@ -177,8 +184,12 @@ export default function MyPageScreen() {
       <View style={styles.container}>
         <View style={styles.profileSection}>
           <View style={styles.profileImagePlaceholder}>
-            {member?.profile_img ? (
-              <Image source={{ uri: member.profile_img }} style={styles.profileImage} />
+            {member?.profile_img && !profileImageFailed ? (
+              <Image
+                source={{ uri: member.profile_img }}
+                style={styles.profileImage}
+                onError={() => setProfileImageFailed(true)}
+              />
             ) : (
               <ProfileEmptyIcon />
             )}

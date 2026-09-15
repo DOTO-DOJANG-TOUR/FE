@@ -33,7 +33,7 @@ export function ProfileEmptyIcon({ size = 112 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 112 112" fill="none">
       {BACK_LAYER_PATHS.map((path) => (
-        <Path key={path} fillRule="evenodd" clipRule="evenodd" d={path} fill={Colors.gray.gray20} />
+        <Path key={path} fillRule="evenodd" clipRule="evenodd" d={path} fill={Colors.gray.gray10} />
       ))}
       {FRONT_LAYER_PATHS.map((path) => (
         <Path key={path} fillRule="evenodd" clipRule="evenodd" d={path} fill={Colors.gray.gray30} />
