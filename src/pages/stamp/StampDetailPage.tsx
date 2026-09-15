@@ -187,12 +187,12 @@ export default function FestivalDetailPage({
 
                     <View style={styles.stampTextBox}>
                       <Text style={styles.stampTitle}>
-                        {stamp?.title ?? `관광지 ${index + 1}`}
+                        {stamp?.tourSpotName ?? `관광지 ${index + 1}`}
                       </Text>
 
                       <Text style={styles.stampUnderText}>
                         {stamp
-                          ? `${formatCompletedAt(stamp.completedAt)} 방문 완료`
+                          ? `${formatCompletedAt(stamp.stampedAt)} 방문 완료`
                           : '관광지를 방문하고 도장을 획득해요'}
                       </Text>
                     </View>

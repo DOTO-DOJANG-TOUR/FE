@@ -10,8 +10,8 @@ export type MyTourStamp = {
 }
 
 export type StampDetailItem = {
-  title: string;
-  completedAt: string;
+  tourSpotName: string;
+  stampedAt: string;
 };
 
 export type MyTourStampDetail = {

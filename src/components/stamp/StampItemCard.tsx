@@ -1,7 +1,7 @@
 import DefaultFestivalImage from '@/assets/images/festival/common/card-dim-2.png';
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { DojangTourStatus } from '@/types/festival';
-import { MyTourStamp } from '@/types/tour';
+import { MyTourStamp } from '@/types/stamp';
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { FestivalStatusBadge } from '../common/FestivalStatusBadge';

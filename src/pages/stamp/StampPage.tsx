@@ -4,7 +4,7 @@ import { EmptyIcon } from "@/components/icons/EmptyIcon";
 import { InfoIcon } from "@/components/icons/InfoIcon";
 import StampItemCard from "@/components/stamp/StampItemCard";
 import { Colors, FontFamily, FontSize, Spacing } from "@/constants/theme";
-import { TourStampListResult } from "@/types/tour";
+import { TourStampListResult } from "@/types/stamp";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
