@@ -13,6 +13,7 @@ import {
 } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { AppState, useColorScheme } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -98,26 +99,29 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider
-      value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}
-    >
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Protected guard={status === 'unauthenticated'}>
-          <Stack.Screen name="login" />
-        </Stack.Protected>
-        <Stack.Protected
-          guard={status === 'authenticated' && tourVisitStatus !== 'active'}
-        >
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="festival-detail" />
-          <Stack.Screen name="festival-search" />
-          <Stack.Screen name="search" />
-          <Stack.Screen name="visit" options={{ animation: 'fade' }} />
-        </Stack.Protected>
-        <Stack.Protected guard={status === 'authenticated'}>
-          <Stack.Screen name="check-in" />
-        </Stack.Protected>
-      </Stack>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider
+        value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}
+      >
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Protected guard={status === 'unauthenticated'}>
+            <Stack.Screen name="login" />
+          </Stack.Protected>
+          <Stack.Protected
+            guard={status === 'authenticated' && tourVisitStatus !== 'active'}
+          >
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="festival-detail" />
+            <Stack.Screen name="festival-search" />
+            <Stack.Screen name="search" />
+            <Stack.Screen name="visit" options={{ animation: 'fade' }} />
+            <Stack.Screen name="stamp-detail/[id]" />
+          </Stack.Protected>
+          <Stack.Protected guard={status === 'authenticated'}>
+            <Stack.Screen name="check-in" />
+          </Stack.Protected>
+        </Stack>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -2,7 +2,7 @@ import { getTourSpotDetail } from '@/apis/tour';
 import { distanceMeters } from '@/utils/geo';
 import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
 import type { LocationProblem } from '@/utils/locationPolicy';
-import { ApiError } from '@/apis/client';
+import { ApiError, getServerNowMs } from '@/apis/client';
 import { createTourSpotStamp, stopTourSpotVisit } from '@/apis/tourVisit';
 import { AlertModal } from '@/components/common/AlertModal';
 import { DojangTourButton } from '@/components/common/DojangTourButton';
@@ -15,19 +15,31 @@ import {
   VisitPinShadowIcon,
 } from '@/components/tour/TourIcons';
 import { Colors, FontFamily } from '@/constants/theme';
-import { useCurrentLocation } from '@/hooks/use-current-location';
+import { getRecentLocationSnapshot, useCurrentLocation } from '@/hooks/use-current-location';
 import { useTourVisitStore } from '@/stores/tourVisitStore';
+import type { TourSpotDetail } from '@/types/tour';
+import { getCachedTourSpot } from '@/utils/tourSpotCache';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// #41(stamp-detail) 머지 전까지 임시로 비활성화. 머지 후 true로 바꾸고 라우트를 연결한다.
-const STAMP_DETAIL_ROUTE_AVAILABLE = false;
+const MAX_VISIT_DURATION_MS = 7 * 60 * 60 * 1000;
+const ARRIVAL_RADIUS_M = 300;
+const RECENT_LOCATION_MAX_AGE_MS = 10_000;
+const RECENT_LOCATION_MOVEMENT_BUFFER_M = 100;
+
+function getTourSpotPoint(spot: TourSpotDetail | null) {
+  if (!spot?.mapY?.trim() || !spot.mapX?.trim()) return null;
+  const point = { lat: Number(spot.mapY), lng: Number(spot.mapX) };
+  if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng) ||
+    Math.abs(point.lat) > 90 || Math.abs(point.lng) > 180) return null;
+  return point;
+}
 
 function formatCountdown(remainingMs: number) {
   // 남은 시간이 실제로 만료되기 전에 00:00:00이 먼저 표시되지 않도록 올림한다.
-  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+  const totalSeconds = Math.max(0, Math.ceil(Math.min(remainingMs, MAX_VISIT_DURATION_MS) / 1000));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
@@ -46,12 +58,11 @@ export default function TourCheckInPage() {
   const tourSpotName = useTourVisitStore((state) => state.tourSpotName);
   const expiresAt = useTourVisitStore((state) => state.expiresAt);
   const restore = useTourVisitStore((state) => state.restore);
+  const completeVisit = useTourVisitStore((state) => state.complete);
 
   const [remainingMs, setRemainingMs] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState(false);
-  const [completionRestoring, setCompletionRestoring] = useState(false);
-  const completionRestorePromiseRef = useRef<Promise<void> | null>(null);
   const expirationHandledRef = useRef(false);
   const [exitConfirmVisible, setExitConfirmVisible] = useState(false);
   const [tooFarVisible, setTooFarVisible] = useState(false);
@@ -65,9 +76,15 @@ export default function TourCheckInPage() {
     router.replace('/(tabs)/tour');
   };
 
-  const handleCompletedClose = async () => {
-    await completionRestorePromiseRef.current;
+  const handleCompletedClose = () => {
+    completeVisit();
     router.replace('/(tabs)/tour');
+  };
+
+  const handleStampStatus = () => {
+    if (!festivalId) return;
+    completeVisit();
+    router.replace({ pathname: '/stamp-detail/[id]', params: { id: festivalId } });
   };
 
   // 서버가 내려준 expiresAt 기준으로 매초 다시 계산한다(로컬에서 7시간을 새로 세지 않음).
@@ -90,7 +107,9 @@ export default function TourCheckInPage() {
     };
 
     const tick = () => {
-      const remaining = new Date(expiresAt).getTime() - Date.now();
+      // 방문 API 응답의 Date 헤더로 보정한 서버 시각을 사용한다. 기기 시계가 서버보다
+      // 느려도 07:00:xx로 시작하지 않으며, 백그라운드·재진입 후에도 expiresAt은 그대로다.
+      const remaining = new Date(expiresAt).getTime() - getServerNowMs();
       setRemainingMs(Math.max(0, remaining));
 
       if (remaining <= 0 && !expirationHandledRef.current) {
@@ -107,10 +126,10 @@ export default function TourCheckInPage() {
   // 취소·만료 등으로 다른 곳에서 활성 방문이 종료되면 화면 잠금이 풀리므로 이 화면도 빠져나간다.
   // 도장 획득 완료 화면은 예외 — 사용자가 닫기/도장 확인을 누를 때까지 유지한다.
   useEffect(() => {
-    if (completed || completionRestoring || expirationHandledRef.current) return;
+    if (completed || expirationHandledRef.current) return;
     if (status === 'idle') navigateBack();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, completed, completionRestoring]);
+  }, [status, completed]);
 
   const handleArrival = async () => {
     if (arrivalPending.current || completed) return;
@@ -124,22 +143,44 @@ export default function TourCheckInPage() {
     setTooFarVisible(false);
     setLocationProblem(null);
     try {
-      const result = await requestLocation();
+      const cachedSpot = getCachedTourSpot(festivalId, tourSpotId)?.detail ?? null;
+      const cachedTarget = getTourSpotPoint(cachedSpot);
+      const recentLocation = getRecentLocationSnapshot(RECENT_LOCATION_MAX_AGE_MS);
+
+      // 방문 시작 직전에 얻은 고정밀 좌표로도 명백히 범위 밖이면 OS GPS와 API를 다시
+      // 기다리지 않는다. 정확도 오차와 이동 여유분은 거리에서 제외해 경계 근처는 반드시
+      // 아래의 새 GPS 및 서버 판정으로 확인한다.
+      if (cachedTarget && recentLocation &&
+        distanceMeters(recentLocation.coords, cachedTarget) >
+          ARRIVAL_RADIUS_M + recentLocation.accuracy + RECENT_LOCATION_MOVEMENT_BUFFER_M) {
+        const active = useTourVisitStore.getState();
+        if (expirationHandledRef.current || active.tourSpotId !== tourSpotId || active.status !== 'active') return;
+        setTooFarVisible(true);
+        return;
+      }
+
+      // 캐시가 없는 복원 진입에서도 GPS와 관광지 상세 API를 병렬로 기다린다.
+      const [result, spot] = await Promise.all([
+        requestLocation(),
+        cachedSpot ? Promise.resolve(cachedSpot) : getTourSpotDetail(festivalId, tourSpotId),
+      ]);
       if (!result.coords) {
         setLocationProblem(result.problem);
         return;
       }
-      const spot = await getTourSpotDetail(festivalId, tourSpotId);
-      const target = { lat: Number(spot.mapY), lng: Number(spot.mapX) };
-      if (!spot.mapY?.trim() || !spot.mapX?.trim() || !Number.isFinite(target.lat) ||
-        !Number.isFinite(target.lng) || Math.abs(target.lat) > 90 || Math.abs(target.lng) > 180) {
+      if (!spot) {
+        setRetryVisible(true);
+        return;
+      }
+      const target = getTourSpotPoint(spot);
+      if (!target) {
         setRetryVisible(true);
         return;
       }
       // 위치 조회 중 만료되거나 다른 방문으로 전환됐으면 이전 방문에 인증하지 않는다.
       const active = useTourVisitStore.getState();
       if (expirationHandledRef.current || active.tourSpotId !== tourSpotId || active.status !== 'active') return;
-      if (distanceMeters(result.coords, target) > 300) {
+      if (distanceMeters(result.coords, target) > ARRIVAL_RADIUS_M) {
         setTooFarVisible(true);
         return;
       }
@@ -149,13 +190,6 @@ export default function TourCheckInPage() {
         mapY: result.coords.lat,
       });
       setCompleted(true);
-      setCompletionRestoring(true);
-      const completionRestorePromise = restore().finally(() => {
-        setCompletionRestoring(false);
-        completionRestorePromiseRef.current = null;
-      });
-      completionRestorePromiseRef.current = completionRestorePromise;
-      void completionRestorePromise;
     } catch (error) {
       if (error instanceof ApiError && error.code === 'STAMP-400-001') {
         setTooFarVisible(true);
@@ -208,26 +242,16 @@ export default function TourCheckInPage() {
           ]}
         >
           <Pressable
-            style={[styles.closeButton, completionRestoring && styles.disabledCloseButton]}
-            disabled={completionRestoring}
+            style={styles.closeButton}
             onPress={handleCompletedClose}
           >
             <Text style={styles.closeButtonText}>닫기</Text>
           </Pressable>
           <Pressable
-            style={[
-              styles.stampStatusButton,
-              !STAMP_DETAIL_ROUTE_AVAILABLE && styles.disabledStampStatusButton,
-            ]}
-            disabled={!STAMP_DETAIL_ROUTE_AVAILABLE}
-            onPress={() => router.push(`/stamp-detail/${tourSpotId}` as never)}
+            style={styles.stampStatusButton}
+            onPress={handleStampStatus}
           >
-            <Text
-              style={[
-                styles.stampStatusButtonText,
-                !STAMP_DETAIL_ROUTE_AVAILABLE && styles.disabledStampStatusButtonText,
-              ]}
-            >
+            <Text style={styles.stampStatusButtonText}>
               도장 현황 확인하기
             </Text>
           </Pressable>
@@ -453,9 +477,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: Colors.gray.gray20,
   },
-  disabledCloseButton: {
-    opacity: 0.5,
-  },
   closeButtonText: {
     color: Colors.gray.gray60,
     fontSize: 16,
@@ -470,16 +491,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: Colors.pink.pink40,
   },
-  disabledStampStatusButton: {
-    backgroundColor: Colors.gray.gray20,
-  },
   stampStatusButtonText: {
     color: Colors.gray.gray00,
     fontSize: 16,
     lineHeight: 16 * 1.5,
     fontFamily: FontFamily.semiBold,
-  },
-  disabledStampStatusButtonText: {
-    color: Colors.gray.gray60,
   },
 });

@@ -11,7 +11,7 @@ type TourVisitState = {
   tourSpotName: string | null;
   expiresAt: string | null;
 
-  // 로그인 직후·포그라운드 복귀·취소/도장 획득/만료 직후 서버 기준으로 상태를 다시 확인한다.
+  // 로그인 직후·포그라운드 복귀·취소/만료 직후 서버 기준으로 상태를 다시 확인한다.
   restore: () => Promise<void>;
   // 방문을 막 시작한 직후에는 시작 응답을 그대로 반영한다(재조회 불필요).
   start: (visit: {
@@ -20,6 +20,8 @@ type TourVisitState = {
     tourSpotName: string;
     expiresAt: string;
   }) => Promise<void>;
+  // 도장 획득 API가 성공한 뒤 완료 화면을 닫을 때 서버 재조회 없이 화면 잠금을 해제한다.
+  complete: () => void;
 };
 
 export const useTourVisitStore = create<TourVisitState>((set) => ({
@@ -60,4 +62,12 @@ export const useTourVisitStore = create<TourVisitState>((set) => ({
     await saveActiveVisitFestivalId(tourSpotId, festivalId);
     set({ status: 'active', festivalId, tourSpotId, tourSpotName, expiresAt });
   },
+
+  complete: () => set({
+    status: 'idle',
+    festivalId: null,
+    tourSpotId: null,
+    tourSpotName: null,
+    expiresAt: null,
+  }),
 }));

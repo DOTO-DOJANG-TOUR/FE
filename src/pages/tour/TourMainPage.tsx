@@ -151,7 +151,8 @@ export default function TourMainPage() {
           const category = mapTourCategory(spot.category);
           const point: GeoPoint = { lat: Number(spot.mapY), lng: Number(spot.mapX) };
 
-          if (!category || !Number.isFinite(point.lat) || !Number.isFinite(point.lng)) {
+          if (!category || !spot.mapY.trim() || !spot.mapX.trim() ||
+            !Number.isFinite(point.lat) || !Number.isFinite(point.lng)) {
             return null;
           }
 
@@ -214,7 +215,7 @@ export default function TourMainPage() {
           getTourSpotDetail(festivalId, attractionId),
           getTourSpots(festivalId),
         ]);
-        setCachedTourSpot(festivalId, attractionId, { detail, spots: spotList });
+        if (detail) setCachedTourSpot(festivalId, attractionId, { detail, spots: spotList });
       } catch (error) {
         // 미리 받아오기가 실패해도 상세 화면 자체의 재시도 흐름으로 넘기면 되니 이동은 그대로 진행한다.
         console.warn('관광지 상세 미리 불러오기 실패:', error);

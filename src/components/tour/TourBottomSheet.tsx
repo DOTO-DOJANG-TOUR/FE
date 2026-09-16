@@ -2,10 +2,10 @@ import { CategoryBadge } from '@/components/common/CategoryBadge';
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { REQUIRED_STAMP_COUNT, TourColors, TourTypography } from '@/constants/tourTheme';
 import type { TourAttraction, TourFilterCategory } from '@/types/tour';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTourSheet } from '@/hooks/use-tour-sheet';
 import { TourAsset } from './TourAsset';
-import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { GestureDetector } from 'react-native-gesture-handler';
 import {
   Animated,
   Pressable,
@@ -59,10 +59,14 @@ export function TourBottomSheet({
     expanded, collapsedHeight, expandedHeight, onExpandedChange,
   });
 
+  // 애니메이션 중 onLayout 높이를 매 프레임 부모로 올리면 지도 위 버튼까지 계속 재배치된다.
+  // 시트가 향하는 스냅 높이만 알려서 지도와 시트가 서로의 레이아웃을 흔들지 않게 한다.
+  useEffect(() => {
+    onHeightChange?.(expanded ? expandedHeight : collapsedHeight);
+  }, [expanded, collapsedHeight, expandedHeight, onHeightChange]);
+
   return (
-    <GestureHandlerRootView style={styles.gestureRoot} pointerEvents="box-none">
-    <Animated.View style={[styles.sheet, { height }]}
-      onLayout={(event) => onHeightChange?.(event.nativeEvent.layout.height)}>
+    <Animated.View style={[styles.sheet, { height }]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={expanded ? '관광지 목록 최소화' : '관광지 목록 최대화'}
@@ -130,7 +134,6 @@ export function TourBottomSheet({
         </View></GestureDetector>
       )}
     </Animated.View>
-    </GestureHandlerRootView>
   );
 }
 
@@ -140,7 +143,6 @@ export const TOUR_SHEET_HEIGHT = {
 } as const;
 
 const styles = StyleSheet.create({
-  gestureRoot: { ...StyleSheet.absoluteFill },
   sheet: {
     position: 'absolute',
     right: 0,
