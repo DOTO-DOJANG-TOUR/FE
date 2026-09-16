@@ -1,6 +1,6 @@
 import DefaultTodayFestivalImage from '@/assets/images/festival/common/card-dim.png';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
@@ -20,14 +20,10 @@ export default function TodayFestivalCard({
   region,
   onPress,
 }: Props) {
-  const [imageError, setImageError] = useState(false);
-
-  useEffect(() => {
-    setImageError(false);
-  }, [imageUrl]);
+  const [failedImageUri, setFailedImageUri] = useState<string | undefined>();
 
   const imageSource =
-    imageUrl && !imageError
+    imageUrl && failedImageUri !== imageUrl
       ? { uri: imageUrl }
       : DefaultTodayFestivalImage;
 
@@ -38,7 +34,7 @@ export default function TodayFestivalCard({
         style={styles.container}
         imageStyle={styles.image}
         resizeMode="cover"
-        onError={() => setImageError(true)}
+        onError={() => setFailedImageUri(imageUrl)}
       >
         <View style={[StyleSheet.absoluteFill, styles.overlay]} />
         <View style={styles.content}>
