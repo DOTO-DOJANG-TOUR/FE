@@ -1,15 +1,16 @@
-import { CategoryBadge } from '@/components/common/CategoryBadge';
-import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
+import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import type { TourAttraction } from '@/types/tour';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { CheckerPlaceholder } from './CheckerPlaceholder';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { TourImage } from './TourImage';
+import { TourCategoryBadge } from './TourCategoryBadge';
 
 type Props = {
   attraction: TourAttraction;
-  onPress: () => void;
+  onPress?: () => void;
+  showCategory?: boolean;
 };
 
-export function TourAttractionCard({ attraction, onPress }: Props) {
+export function TourAttractionCard({ attraction, onPress, showCategory = true }: Props) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -17,22 +18,18 @@ export function TourAttractionCard({ attraction, onPress }: Props) {
       style={styles.card}
       onPress={onPress}
     >
-      {attraction.imageUrls[0] ? (
-        <Image source={{ uri: attraction.imageUrls[0] }} style={[styles.image, styles.imageRounded]} />
-      ) : (
-        <CheckerPlaceholder columns={4} rows={4} rounded style={styles.image} />
-      )}
+      <TourImage uri={attraction.imageUrls[0]} style={styles.image} />
       <View style={styles.content}>
         <View>
           <Text numberOfLines={1} style={styles.title}>
             {attraction.title}
           </Text>
-          <Text numberOfLines={1} style={styles.subtitle}>
+          <Text numberOfLines={2} style={styles.subtitle}>
             {attraction.distance ? `${attraction.distance} · ` : ''}
             {attraction.address}
           </Text>
         </View>
-        <CategoryBadge category={attraction.category} />
+        {showCategory && <TourCategoryBadge category={attraction.category} />}
       </View>
     </Pressable>
   );
@@ -48,25 +45,20 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
   },
-  imageRounded: {
-    borderRadius: Radius.md,
-  },
   content: {
     flex: 1,
-    justifyContent: 'space-between',
-    paddingVertical: 2,
+    gap: 8,
   },
   title: {
     color: Colors.gray.gray100,
     fontSize: FontSize.md,
     lineHeight: FontSize.md * 1.5,
-    fontFamily: FontFamily.semiBold,
+    includeFontPadding: false, fontFamily: FontFamily.semiBold,
   },
   subtitle: {
-    marginTop: Spacing.one,
-    color: Colors.gray.gray100,
-    fontSize: FontSize.xs,
-    lineHeight: FontSize.xs * 1.5,
-    fontFamily: FontFamily.regular,
+    color: Colors.gray.gray80,
+    fontSize: FontSize.sm,
+    lineHeight: FontSize.sm * 1.5,
+    includeFontPadding: false, fontFamily: FontFamily.regular,
   },
 });
