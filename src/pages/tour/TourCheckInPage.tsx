@@ -24,8 +24,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// #41(stamp-detail) 머지 전까지 임시로 비활성화. 머지 후 true로 바꾸고 라우트를 연결한다.
-const STAMP_DETAIL_ROUTE_AVAILABLE = false;
 const MAX_VISIT_DURATION_MS = 7 * 60 * 60 * 1000;
 const ARRIVAL_RADIUS_M = 300;
 const RECENT_LOCATION_MAX_AGE_MS = 10_000;
@@ -60,12 +58,11 @@ export default function TourCheckInPage() {
   const tourSpotName = useTourVisitStore((state) => state.tourSpotName);
   const expiresAt = useTourVisitStore((state) => state.expiresAt);
   const restore = useTourVisitStore((state) => state.restore);
+  const completeVisit = useTourVisitStore((state) => state.complete);
 
   const [remainingMs, setRemainingMs] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState(false);
-  const [completionRestoring, setCompletionRestoring] = useState(false);
-  const completionRestorePromiseRef = useRef<Promise<void> | null>(null);
   const expirationHandledRef = useRef(false);
   const [exitConfirmVisible, setExitConfirmVisible] = useState(false);
   const [tooFarVisible, setTooFarVisible] = useState(false);
@@ -79,9 +76,15 @@ export default function TourCheckInPage() {
     router.replace('/(tabs)/tour');
   };
 
-  const handleCompletedClose = async () => {
-    await completionRestorePromiseRef.current;
+  const handleCompletedClose = () => {
+    completeVisit();
     router.replace('/(tabs)/tour');
+  };
+
+  const handleStampStatus = () => {
+    if (!festivalId) return;
+    completeVisit();
+    router.replace({ pathname: '/stamp-detail/[id]', params: { id: festivalId } });
   };
 
   // 서버가 내려준 expiresAt 기준으로 매초 다시 계산한다(로컬에서 7시간을 새로 세지 않음).
@@ -123,10 +126,10 @@ export default function TourCheckInPage() {
   // 취소·만료 등으로 다른 곳에서 활성 방문이 종료되면 화면 잠금이 풀리므로 이 화면도 빠져나간다.
   // 도장 획득 완료 화면은 예외 — 사용자가 닫기/도장 확인을 누를 때까지 유지한다.
   useEffect(() => {
-    if (completed || completionRestoring || expirationHandledRef.current) return;
+    if (completed || expirationHandledRef.current) return;
     if (status === 'idle') navigateBack();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, completed, completionRestoring]);
+  }, [status, completed]);
 
   const handleArrival = async () => {
     if (arrivalPending.current || completed) return;
@@ -187,13 +190,6 @@ export default function TourCheckInPage() {
         mapY: result.coords.lat,
       });
       setCompleted(true);
-      setCompletionRestoring(true);
-      const completionRestorePromise = restore().finally(() => {
-        setCompletionRestoring(false);
-        completionRestorePromiseRef.current = null;
-      });
-      completionRestorePromiseRef.current = completionRestorePromise;
-      void completionRestorePromise;
     } catch (error) {
       if (error instanceof ApiError && error.code === 'STAMP-400-001') {
         setTooFarVisible(true);
@@ -246,26 +242,16 @@ export default function TourCheckInPage() {
           ]}
         >
           <Pressable
-            style={[styles.closeButton, completionRestoring && styles.disabledCloseButton]}
-            disabled={completionRestoring}
+            style={styles.closeButton}
             onPress={handleCompletedClose}
           >
             <Text style={styles.closeButtonText}>닫기</Text>
           </Pressable>
           <Pressable
-            style={[
-              styles.stampStatusButton,
-              !STAMP_DETAIL_ROUTE_AVAILABLE && styles.disabledStampStatusButton,
-            ]}
-            disabled={!STAMP_DETAIL_ROUTE_AVAILABLE}
-            onPress={() => router.push(`/stamp-detail/${tourSpotId}` as never)}
+            style={styles.stampStatusButton}
+            onPress={handleStampStatus}
           >
-            <Text
-              style={[
-                styles.stampStatusButtonText,
-                !STAMP_DETAIL_ROUTE_AVAILABLE && styles.disabledStampStatusButtonText,
-              ]}
-            >
+            <Text style={styles.stampStatusButtonText}>
               도장 현황 확인하기
             </Text>
           </Pressable>
@@ -491,9 +477,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: Colors.gray.gray20,
   },
-  disabledCloseButton: {
-    opacity: 0.5,
-  },
   closeButtonText: {
     color: Colors.gray.gray60,
     fontSize: 16,
@@ -508,16 +491,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: Colors.pink.pink40,
   },
-  disabledStampStatusButton: {
-    backgroundColor: Colors.gray.gray20,
-  },
   stampStatusButtonText: {
     color: Colors.gray.gray00,
     fontSize: 16,
     lineHeight: 16 * 1.5,
     fontFamily: FontFamily.semiBold,
-  },
-  disabledStampStatusButtonText: {
-    color: Colors.gray.gray60,
   },
 });

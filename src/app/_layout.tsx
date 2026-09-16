@@ -115,6 +115,7 @@ export default function RootLayout() {
             <Stack.Screen name="festival-search" />
             <Stack.Screen name="search" />
             <Stack.Screen name="visit" options={{ animation: 'fade' }} />
+            <Stack.Screen name="stamp-detail/[id]" />
           </Stack.Protected>
           <Stack.Protected guard={status === 'authenticated'}>
             <Stack.Screen name="check-in" />
