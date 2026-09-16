@@ -17,7 +17,7 @@ import { AppState, useColorScheme } from 'react-native';
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
-  const [loaded] = useFonts({
+  const [loaded, fontError] = useFonts({
     PretendardRegular: require('../../assets/fonts/Pretendard-Regular.otf'),
     PretendardMedium: require('../../assets/fonts/Pretendard-Medium.otf'),
     PretendardSemiBold: require('../../assets/fonts/Pretendard-SemiBold.otf'),
@@ -33,6 +33,7 @@ export default function RootLayout() {
   const initialize = useAuthStore((state) => state.initialize);
   const initializedRef = useRef(false);
   const [minimumSplashElapsed, setMinimumSplashElapsed] = useState(false);
+  const [splashLaidOut, setSplashLaidOut] = useState(false);
 
   const tourVisitStatus = useTourVisitStore((state) => state.status);
   const restoreTourVisit = useTourVisitStore((state) => state.restore);
@@ -43,17 +44,25 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded && !fontError) return;
 
     if (!initializedRef.current) {
       initializedRef.current = true;
-      SplashScreen.hideAsync().catch(() => undefined);
       initialize();
     }
 
-    const timeout = setTimeout(() => setMinimumSplashElapsed(true), 500);
-    return () => clearTimeout(timeout);
-  }, [initialize, loaded]);
+  }, [initialize, loaded, fontError]);
+
+  useEffect(() => {
+    if (!splashLaidOut) return;
+    // DOTO 화면이 배치된 뒤 네이티브 시작 화면을 내리고 표시 시간을 센다.
+    let active = true;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    SplashScreen.hideAsync().catch(() => undefined).then(() => {
+      if (active) timeout = setTimeout(() => setMinimumSplashElapsed(true), 2000);
+    });
+    return () => { active = false; clearTimeout(timeout); };
+  }, [splashLaidOut]);
 
   // 일반 화면을 렌더링하기 전에 활성 방문 관광지를 조회해 화면 잠금 여부를 정한다.
   useEffect(() => {
@@ -76,14 +85,12 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, [status, restoreTourVisit]);
 
-  if (!loaded) {
-    return null;
-  }
-
   const restoringTourVisit = status === 'authenticated' && tourVisitStatus === 'restoring';
 
-  if (!minimumSplashElapsed || status === 'initializing' || restoringTourVisit) {
-    return <AuthLoadingScreen />;
+  const ready = (loaded || !!fontError) && minimumSplashElapsed && status !== 'initializing' && !restoringTourVisit;
+  if (!loaded && !fontError) return null;
+  if (!ready) {
+    return <AuthLoadingScreen onLayout={() => setSplashLaidOut(true)} />;
   }
 
   if (status === 'authenticated' && tourVisitStatus === 'error') {
