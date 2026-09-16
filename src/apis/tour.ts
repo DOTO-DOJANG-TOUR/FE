@@ -56,6 +56,7 @@ export const getTourSpotDetail = async (
       : [],
     legalDongSigunguCode: asString(raw.legalDongSigunguCode),
     phone: asString(raw.phone) || undefined,
+    homepage: asString(raw.homepage) || undefined,
     apiModifiedAt: asString(raw.apiModifiedAt),
   };
 };

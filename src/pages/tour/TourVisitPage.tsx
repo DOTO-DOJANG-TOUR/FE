@@ -150,6 +150,7 @@ export default function TourVisitPage() {
       distance: '',
       imageUrls: detail.imageList.length ? detail.imageList : detail.imageUrl ? [detail.imageUrl] : [],
       phone: detail.phone?.trim() || undefined,
+      homepage: detail.homepage?.trim() || undefined,
     };
   }, [detail]);
 
