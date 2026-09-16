@@ -24,10 +24,7 @@ const DEFAULT_MARKER_FOCUS_LEVEL = 3;
 const MAP_READY_TIMEOUT_MS = 10000;
 
 export type TourMapMarker = {
-  // 클릭 시 이동할 대표 관광지 id(좌표가 겹치는 그룹이면 그중 첫 번째).
   id: string;
-  // 이 좌표에 겹쳐있는 모든 관광지 id — 상세 화면에서 이 중 하나가 선택돼 있으면 마커가 선택 상태로 보인다.
-  memberIds: string[];
   categories: TourCategory[];
   lat: number;
   lng: number;
@@ -130,7 +127,7 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
         lat: marker.lat,
         lng: marker.lng,
         categories: marker.categories,
-        selected: !!selectedMarkerId && marker.memberIds.includes(selectedMarkerId),
+        selected: !!selectedMarkerId && marker.id === selectedMarkerId,
       })),
     [markers, selectedMarkerId],
   );

@@ -6,7 +6,6 @@ import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import type { LocationProblem } from '@/utils/locationPolicy';
 import { ErrorModal } from '@/components/common/ErrorModal';
-import { MarkerGroupPicker, type MarkerGroupOption } from '@/components/tour/MarkerGroupPicker';
 import {
   TOUR_DETAIL_SHEET_HEIGHT,
   TourDetailBottomSheet,
@@ -17,7 +16,7 @@ import { mapTourCategory } from '@/constants/tourCategory';
 import { useDelayedLoading } from '@/hooks/use-delayed-loading';
 import { useTourVisitStore } from '@/stores/tourVisitStore';
 import type { TourAttraction, TourCategory, TourContent, TourSpotDetail } from '@/types/tour';
-import { groupByCoordinate, type GeoPoint } from '@/utils/geo';
+import { declutterCoordinates, type GeoPoint } from '@/utils/geo';
 import { getCachedTourSpot, setCachedTourSpot } from '@/utils/tourSpotCache';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -57,7 +56,6 @@ export default function TourVisitPage() {
     retry: () => void;
     isOffline: boolean;
   } | null>(null);
-  const [groupPickerOptions, setGroupPickerOptions] = useState<MarkerGroupOption[] | null>(null);
   const [retryVisible, setRetryVisible] = useState(false);
   const [duplicateVisitMessage, setDuplicateVisitMessage] = useState<string | null>(null);
 
@@ -154,7 +152,8 @@ export default function TourVisitPage() {
     };
   }, [detail]);
 
-  // 좌표가 같은(주소가 같은) 관광지가 여러 개면 마커 하나에 아이콘을 나란히 묶어서 보여준다(#37).
+  // 좌표가 같은(주소가 같은) 관광지가 여러 개여도 마커는 하나로 합치지 않고 각자 유지하되,
+  // 겹쳐 보이지 않도록 declutterCoordinates가 서로 살짝 밀어내 배치한다(#37, PM 요청으로 방향 전환).
   const markers = useMemo<TourMapMarker[]>(() => {
     const validSpots = spots
       .map((spot) => {
@@ -170,12 +169,11 @@ export default function TourVisitPage() {
         (item): item is { id: string; category: TourCategory; point: GeoPoint } => item !== null,
       );
 
-    return groupByCoordinate(validSpots, (item) => item.point).map((group) => ({
-      id: group.items[0].id,
-      memberIds: group.items.map((item) => item.id),
-      categories: group.items.map((item) => item.category),
-      lat: group.lat,
-      lng: group.lng,
+    return declutterCoordinates(validSpots, (item) => item.point).map((item) => ({
+      id: item.id,
+      categories: [item.category],
+      lat: item.point.lat,
+      lng: item.point.lng,
     }));
   }, [spots]);
 
@@ -216,31 +214,7 @@ export default function TourVisitPage() {
   };
 
   const handleMarkerPress = (markerId: string) => {
-    const group = markers.find((marker) => marker.id === markerId);
-    if (!group) return;
-
-    if (group.memberIds.length <= 1) {
-      navigateToAttraction(markerId);
-      return;
-    }
-
-    // 좌표가 겹쳐 마커 하나로 합쳐진 경우 어디로 갈지 고르게 한다(#37).
-    const options = group.memberIds
-      .map((id) => {
-        const spot = spots.find((item) => item.tourSpotId === id);
-        if (!spot) return null;
-        const category = mapTourCategory(spot.category);
-        if (!category) return null;
-        return { id: spot.tourSpotId, title: spot.title, category };
-      })
-      .filter((option): option is MarkerGroupOption => option !== null);
-
-    setGroupPickerOptions(options);
-  };
-
-  const handleGroupPickerSelect = (targetId: string) => {
-    setGroupPickerOptions(null);
-    navigateToAttraction(targetId);
+    navigateToAttraction(markerId);
   };
 
   const handleVisit = async () => {
@@ -351,13 +325,6 @@ export default function TourVisitPage() {
       />
 
       <LocationProblemModal problem={locationProblem} purpose="visit" onClose={() => setLocationProblem(null)} />
-
-      <MarkerGroupPicker
-        visible={groupPickerOptions !== null}
-        options={groupPickerOptions ?? []}
-        onSelect={handleGroupPickerSelect}
-        onClose={() => setGroupPickerOptions(null)}
-      />
     </View>
   );
 }

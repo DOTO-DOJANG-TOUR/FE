@@ -9,7 +9,6 @@ import type { LocationProblem } from '@/utils/locationPolicy';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { LoadingIndicator } from '@/components/common/LoadingIndicator';
 import { TOUR_SHEET_HEIGHT, TourBottomSheet } from '@/components/tour/TourBottomSheet';
-import { MarkerGroupPicker, type MarkerGroupOption } from '@/components/tour/MarkerGroupPicker';
 import { TourMap, type TourMapHandle, type TourMapMarker } from '@/components/tour/TourMap';
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { mapTourCategory } from '@/constants/tourCategory';
@@ -17,7 +16,7 @@ import { TourColors } from '@/constants/tourTheme';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useDelayedLoading } from '@/hooks/use-delayed-loading';
 import type { StampTourDetail, TourAttraction, TourFilterCategory } from '@/types/tour';
-import { groupByCoordinate, parseDistanceMeters, selectNearbySpots, type GeoPoint } from '@/utils/geo';
+import { declutterCoordinates, parseDistanceMeters, selectNearbySpots, type GeoPoint } from '@/utils/geo';
 import { getCachedTourSpot, setCachedTourSpot } from '@/utils/tourSpotCache';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -51,7 +50,6 @@ export default function TourMainPage() {
     festivalId: string;
     point: GeoPoint;
   } | null>(null);
-  const [groupPickerOptions, setGroupPickerOptions] = useState<MarkerGroupOption[] | null>(null);
   const [navigatingAttractionId, setNavigatingAttractionId] = useState<string | null>(null);
 
   // 탭 재진입마다 다시 조회하는데(useFocusEffect), 응답이 빨리 오면 스피너를 아예 안 띄워서
@@ -197,15 +195,15 @@ export default function TourMainPage() {
 
   const attractions = useMemo(() => filteredItems.map((item) => item.attraction), [filteredItems]);
 
-  // 좌표가 같은(주소가 같은) 관광지가 여러 개면 마커 하나에 아이콘을 나란히 묶어서 보여준다(#37).
+  // 좌표가 같은(주소가 같은) 관광지가 여러 개여도 마커는 하나로 합치지 않고 각자 유지하되,
+  // 겹쳐 보이지 않도록 declutterCoordinates가 서로 살짝 밀어내 배치한다(#37, PM 요청으로 방향 전환).
   const markers = useMemo<TourMapMarker[]>(
     () =>
-      groupByCoordinate(filteredItems, (item) => item.point).map((group) => ({
-        id: group.items[0].attraction.id,
-        memberIds: group.items.map((item) => item.attraction.id),
-        categories: group.items.map((item) => item.attraction.category),
-        lat: group.lat,
-        lng: group.lng,
+      declutterCoordinates(filteredItems, (item) => item.point).map((item) => ({
+        id: item.attraction.id,
+        categories: [item.attraction.category],
+        lat: item.point.lat,
+        lng: item.point.lng,
       })),
     [filteredItems],
   );
@@ -248,30 +246,7 @@ export default function TourMainPage() {
   };
 
   const handleMarkerPress = (markerId: string) => {
-    const group = markers.find((marker) => marker.id === markerId);
-    if (!group) return;
-
-    if (group.memberIds.length <= 1) {
-      goToAttraction(markerId);
-      return;
-    }
-
-    // 좌표가 겹쳐 마커 하나로 합쳐진 경우 어디로 갈지 고르게 한다(#37).
-    const options = group.memberIds
-      .map((id) => attractionsWithPoint.find((item) => item.attraction.id === id)?.attraction)
-      .filter((attraction): attraction is TourAttraction => !!attraction)
-      .map((attraction) => ({
-        id: attraction.id,
-        title: attraction.title,
-        category: attraction.category,
-      }));
-
-    setGroupPickerOptions(options);
-  };
-
-  const handleGroupPickerSelect = (attractionId: string) => {
-    setGroupPickerOptions(null);
-    goToAttraction(attractionId);
+    goToAttraction(markerId);
   };
 
   const handleLocationPress = async () => {
@@ -366,13 +341,6 @@ export default function TourMainPage() {
       />
 
       <LocationProblemModal problem={locationProblem} purpose="map" onClose={() => setLocationProblem(null)} />
-
-      <MarkerGroupPicker
-        visible={groupPickerOptions !== null}
-        options={groupPickerOptions ?? []}
-        onSelect={handleGroupPickerSelect}
-        onClose={() => setGroupPickerOptions(null)}
-      />
     </View>
   );
 }
