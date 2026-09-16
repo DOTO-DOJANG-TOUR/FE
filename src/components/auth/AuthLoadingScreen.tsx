@@ -9,11 +9,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export function AuthLoadingScreen() {
+export function AuthLoadingScreen({ onLayout }: { onLayout?: () => void }) {
   const { height: windowHeight } = useWindowDimensions();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} onLayout={onLayout}>
       <View
         style={[
           styles.screen,

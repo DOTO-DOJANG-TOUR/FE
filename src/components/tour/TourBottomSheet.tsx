@@ -1,16 +1,19 @@
 import { CategoryBadge } from '@/components/common/CategoryBadge';
-import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
-import { TourColors, TourTypography } from '@/constants/tourTheme';
+import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
+import { REQUIRED_STAMP_COUNT, TourColors, TourTypography } from '@/constants/tourTheme';
 import type { TourAttraction, TourFilterCategory } from '@/types/tour';
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
+import { useTourSheet } from '@/hooks/use-tour-sheet';
+import { TourAsset } from './TourAsset';
+import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   Animated,
-  PanResponder,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { TourAttractionCard } from './TourAttractionCard';
 import { TourStampIcon } from './TourIcons';
@@ -18,7 +21,8 @@ import { TourStampIcon } from './TourIcons';
 type Props = {
   expanded: boolean;
   title: string;
-  stampCount: number;
+  stampCount: number | null;
+  onHeightChange?: (height: number) => void;
   selectedCategory: TourFilterCategory;
   attractions: TourAttraction[];
   onExpandedChange: (expanded: boolean) => void;
@@ -26,8 +30,8 @@ type Props = {
   onAttractionPress: (attraction: TourAttraction) => void;
 };
 
-const COLLAPSED_HEIGHT = 168;
-const EXPANDED_HEIGHT = 536;
+const COLLAPSED_HEIGHT = 164;
+const EXPANDED_HEIGHT = 510;
 const categories: TourFilterCategory[] = [
   'menu',
   'culture',
@@ -45,52 +49,43 @@ export function TourBottomSheet({
   onExpandedChange,
   onCategoryChange,
   onAttractionPress,
+  onHeightChange,
 }: Props) {
-  const [height] = useState(() => new Animated.Value(COLLAPSED_HEIGHT));
-
-  useEffect(() => {
-    Animated.spring(height, {
-      toValue: expanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT,
-      damping: 24,
-      stiffness: 220,
-      mass: 0.8,
-      useNativeDriver: false,
-    }).start();
-  }, [expanded, height]);
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 8,
-        onPanResponderRelease: (_, gesture) => {
-          if (gesture.dy < -24) onExpandedChange(true);
-          if (gesture.dy > 24) onExpandedChange(false);
-        },
-      }),
-    [onExpandedChange],
-  );
+  const { height: screenHeight } = useWindowDimensions();
+  const [headerHeight, setHeaderHeight] = useState(COLLAPSED_HEIGHT - 45);
+  const collapsedHeight = Math.max(COLLAPSED_HEIGHT, headerHeight + 45);
+  const expandedHeight = Math.max(collapsedHeight, Math.min(EXPANDED_HEIGHT, screenHeight - 180));
+  const { height, headerPanHandlers, bodyGesture, nativeScrollGesture, onScroll } = useTourSheet({
+    expanded, collapsedHeight, expandedHeight, onExpandedChange,
+  });
 
   return (
-    <Animated.View style={[styles.sheet, { height }]}>
+    <GestureHandlerRootView style={styles.gestureRoot} pointerEvents="box-none">
+    <Animated.View style={[styles.sheet, { height }]}
+      onLayout={(event) => onHeightChange?.(event.nativeEvent.layout.height)}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={expanded ? '관광지 목록 최소화' : '관광지 목록 최대화'}
         style={styles.handleArea}
         onPress={() => onExpandedChange(!expanded)}
-        {...panResponder.panHandlers}
+        {...headerPanHandlers}
       >
         <View style={styles.handle} />
       </Pressable>
 
-      <View style={styles.header}>
+      <View style={styles.header} {...headerPanHandlers}
+        onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}>
+        <View style={styles.titleGroup}>
         <View style={styles.stampBadge}>
           <TourStampIcon />
-          <Text style={styles.stampText}>{stampCount}/3</Text>
+          <Text style={styles.stampText}>{stampCount === null ? '—' : stampCount}/{REQUIRED_STAMP_COUNT}</Text>
         </View>
         <Text numberOfLines={2} style={styles.title}>
           {title}
         </Text>
+        </View>
         <ScrollView
+          style={styles.filters}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoryRow}
@@ -106,32 +101,36 @@ export function TourBottomSheet({
         </ScrollView>
       </View>
 
-      {expanded && (
-        <View style={styles.listArea}>
+      {(
+        <GestureDetector gesture={bodyGesture}><View style={styles.listArea}>
           {attractions.length > 0 ? (
-            <ScrollView
+            <GestureDetector gesture={nativeScrollGesture}><ScrollView
               showsVerticalScrollIndicator={false}
+              onScroll={onScroll}
+              scrollEventThrottle={16}
+              bounces={false}
+              nestedScrollEnabled
               contentContainerStyle={styles.listContent}
             >
               {attractions.map((attraction) => (
                 <TourAttractionCard
                   key={attraction.id}
                   attraction={attraction}
+                  showCategory={selectedCategory === 'menu'}
                   onPress={() => onAttractionPress(attraction)}
                 />
               ))}
-            </ScrollView>
+            </ScrollView></GestureDetector>
           ) : (
             <View style={styles.emptyContainer}>
-              <View style={styles.emptyIcon}>
-                <Text style={styles.emptyIconText}>×</Text>
-              </View>
+              <TourAsset name="empty" />
               <Text style={styles.emptyText}>이 항목에 해당하는 관광지가 없어요.</Text>
             </View>
           )}
-        </View>
+        </View></GestureDetector>
       )}
     </Animated.View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -141,30 +140,35 @@ export const TOUR_SHEET_HEIGHT = {
 } as const;
 
 const styles = StyleSheet.create({
+  gestureRoot: { ...StyleSheet.absoluteFill },
   sheet: {
     position: 'absolute',
     right: 0,
     bottom: 0,
     left: 0,
     overflow: 'hidden',
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     backgroundColor: Colors.gray.gray00,
     boxShadow: TourColors.sheetShadow,
   },
   handleArea: {
-    height: 28,
+    height: 35,
+    paddingTop: 10,
+    paddingBottom: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   handle: {
-    width: 40,
-    height: 4,
+    width: 41,
+    height: 5,
     borderRadius: Radius.full,
-    backgroundColor: TourColors.gray40,
+    backgroundColor: Colors.gray.gray30,
   },
+  titleGroup: { gap: 8 },
+  filters: { height: 34, flexGrow: 0 },
   header: {
-    gap: 10,
+    gap: 18,
     paddingHorizontal: 20,
   },
   stampBadge: {
@@ -173,33 +177,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
     backgroundColor: Colors.pink.pink10,
   },
   stampText: {
-    color: Colors.pink.pink40,
+    color: Colors.pink.pink50,
     fontSize: FontSize.xs,
-    fontFamily: FontFamily.semiBold,
+    lineHeight: 18,
+    includeFontPadding: false, fontFamily: FontFamily.semiBold,
   },
   title: {
     color: Colors.gray.gray100,
-    fontSize: TourTypography.title,
-    lineHeight: TourTypography.title * 1.5,
-    fontFamily: FontFamily.semiBold,
+    fontSize: TourTypography.sheetTitle,
+    lineHeight: TourTypography.sheetTitle * 1.5,
+    includeFontPadding: false, fontFamily: FontFamily.semiBold,
   },
   categoryRow: {
-    gap: 6,
-    paddingBottom: 2,
+    gap: 7,
   },
   listArea: {
     flex: 1,
-    marginTop: Spacing.three,
+    marginTop: 20,
   },
   listContent: {
-    gap: 14,
+    gap: 10,
     paddingHorizontal: 20,
-    paddingBottom: 24,
+    paddingBottom: 10,
   },
   emptyContainer: {
     flex: 1,
@@ -207,24 +211,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingBottom: 72,
   },
-  emptyIcon: {
-    width: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: TourColors.gray50,
-    borderRadius: Radius.full,
-  },
-  emptyIconText: {
-    color: TourColors.gray50,
-    fontSize: 12,
-    lineHeight: FontSize.xs * 1.5,
-  },
   emptyText: {
+    marginTop: 4,
     color: Colors.gray.gray60,
-    fontSize: FontSize.xs,
-    fontFamily: FontFamily.regular,
+    fontSize: FontSize.sm,
+    includeFontPadding: false, fontFamily: FontFamily.regular,
   },
 });

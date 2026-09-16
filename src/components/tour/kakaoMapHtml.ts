@@ -29,7 +29,7 @@ export function getKakaoMapHtml(javascriptKey: string): string {
   .doto-marker-pin.selected .doto-marker-icon { width: 20px; height: 20px; }
   .doto-current-location { position: relative; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
   .doto-current-location-pulse { position: absolute; width: 48px; height: 48px; border-radius: 999px; background: rgba(53, 139, 255, 0.16); }
-  .doto-current-location-dot { width: 16px; height: 16px; border-radius: 999px; border: 3px solid #FFFFFF; background: #358BFF; box-sizing: border-box; }
+  .doto-current-location-dot { width: 16px; height: 16px; border-radius: 999px; border: 3px solid #FFFFFF; background: #2788FF; box-sizing: border-box; }
 </style>
 </head>
 <body>

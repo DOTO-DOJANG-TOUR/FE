@@ -1,4 +1,7 @@
-import { SearchIcon } from '@/components/icons/SearchIcon';
+import { TourAsset } from './TourAsset';
+import { LoadingIndicator } from '@/components/common/LoadingIndicator';
+import { useDelayedLoading } from '@/hooks/use-delayed-loading';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { TourColors } from '@/constants/tourTheme';
 import type { TourCategory } from '@/types/tour';
@@ -11,7 +14,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import WebView, { type WebViewMessageEvent } from 'react-native-webview';
 import { getKakaoMapHtml } from './kakaoMapHtml';
 import { CurrentLocationIcon } from './TourIcons';
@@ -64,6 +67,7 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
   },
   ref,
 ) {
+  const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
   const isReadyRef = useRef(false);
   const lastLoadStageRef = useRef('not-started');
@@ -71,6 +75,8 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
   const [isReady, setIsReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
+
+  const showLoading = useDelayedLoading(!isReady && !loadError);
 
   const html = useMemo(() => getKakaoMapHtml(KAKAO_JAVASCRIPT_KEY ?? ''), []);
   const webViewSource = useMemo(() => ({ html, baseUrl: 'http://localhost' }), [html]);
@@ -155,13 +161,13 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
       }
 
       if (message.type === 'error') {
-        console.error('[TourMap] WebView error:', message.message);
+        console.error('[TourMap] WebView SDK error');
         // SDK 로드 실패 등으로 ready가 영영 오지 않으면 로딩 스피너가 계속 떠 있게 되므로,
         // 에러 상태로 전환해 재시도 UI를 보여준다.
         setLoadError(true);
       }
-    } catch (error) {
-      console.error('[TourMap] 메시지 파싱 실패:', error);
+    } catch {
+      console.error('[TourMap] 메시지 파싱 실패');
     }
   };
 
@@ -174,25 +180,15 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
     setLoadAttempt((prev) => prev + 1);
   };
 
-  const handleLoadStart: NonNullable<WebViewProps['onLoadStart']> = (event) => {
+  const handleLoadStart: NonNullable<WebViewProps['onLoadStart']> = () => {
     lastLoadStageRef.current = 'document-loading';
-    console.info(`[TourMap] WebView load started: ${event.nativeEvent.url}`);
   };
-
-  const handleLoadEnd: NonNullable<WebViewProps['onLoadEnd']> = (event) => {
-    console.info(`[TourMap] WebView load ended: ${event.nativeEvent.url}`);
-  };
-
-  const handleWebViewError: NonNullable<WebViewProps['onError']> = (event) => {
-    const { code, description, url } = event.nativeEvent;
+  const handleWebViewError: NonNullable<WebViewProps['onError']> = () => {
     lastLoadStageRef.current = 'document-error';
-    console.error(`[TourMap] WebView load error (${code}): ${description} (${url})`);
     setLoadError(true);
   };
-
-  const handleHttpError: NonNullable<WebViewProps['onHttpError']> = (event) => {
-    const { description, statusCode, url } = event.nativeEvent;
-    console.error(`[TourMap] WebView HTTP error (${statusCode}): ${description} (${url})`);
+  const handleHttpError: NonNullable<WebViewProps['onHttpError']> = () => {
+    setLoadError(true);
   };
 
   const handleRenderProcessGone: NonNullable<WebViewProps['onRenderProcessGone']> = (event) => {
@@ -212,7 +208,6 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
         javaScriptEnabled
         domStorageEnabled
         onLoadStart={handleLoadStart}
-        onLoadEnd={handleLoadEnd}
         onError={handleWebViewError}
         onHttpError={handleHttpError}
         onRenderProcessGone={handleRenderProcessGone}
@@ -227,22 +222,22 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
           </Pressable>
         </View>
       ) : (
-        !isReady && (
+        showLoading && (
           <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
-            <ActivityIndicator color={Colors.pink.pink50} />
+            <LoadingIndicator />
           </View>
         )
       )}
 
-      <View style={styles.searchRow}>
+      <View style={[styles.searchRow, { top: insets.top + 20 }]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="관광지 검색"
           style={styles.searchBar}
           onPress={onSearchPress}
         >
-          <SearchIcon size={20} />
-          <Text style={styles.searchPlaceholder}>방문하고 싶은 관광지 검색</Text>
+          <TourAsset name="search" />
+          <Text numberOfLines={1} style={styles.searchPlaceholder}>방문하고 싶은 관광지 검색</Text>
         </Pressable>
       </View>
 
@@ -290,20 +285,23 @@ const styles = StyleSheet.create({
     right: 20,
   },
   searchBar: {
-    height: 48,
+    height: 44,
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
-    paddingHorizontal: 16,
-    borderRadius: Radius.full,
+    gap: 6,
+    paddingLeft: 10,
+    paddingRight: 20,
+    borderRadius: 20,
     backgroundColor: Colors.gray.gray00,
     boxShadow: TourColors.searchShadow,
   },
   searchPlaceholder: {
-    color: Colors.gray.gray60,
-    fontSize: FontSize.sm,
-    fontFamily: FontFamily.regular,
+    color: Colors.gray.gray70,
+    fontSize: FontSize.md,
+    lineHeight: 24,
+    fontFamily: FontFamily.medium,
+    flex: 1,
   },
   locationButton: {
     position: 'absolute',

@@ -1,3 +1,4 @@
+import { PageLoadingIndicator } from '@/components/common/PageLoadingIndicator';
 import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import { searchFestivals, searchTours } from '@/apis/search';
 import { AlertModal } from '@/components/common/AlertModal';
@@ -12,7 +13,7 @@ import { FestivalContent } from '@/types/festival';
 import { TourContent } from '@/types/tour';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = {
@@ -226,9 +227,7 @@ export default function SearchPage({
       />
       {searchStatus === 'loading' ? (
         <View style={styles.emptyContainer}>
-          <ActivityIndicator
-            color={Colors.pink.pink50}
-          />
+          <PageLoadingIndicator />
         </View>
       ) : searchStatus === 'success' ? (
         type === 'festival' ? (
@@ -260,9 +259,7 @@ export default function SearchPage({
               ListFooterComponent={
                 isFetchingMore ? (
                   <View style={styles.footerLoading}>
-                    <ActivityIndicator
-                      color={Colors.pink.pink50}
-                    />
+                    <PageLoadingIndicator />
                   </View>
                 ) : null
               }

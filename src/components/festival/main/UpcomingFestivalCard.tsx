@@ -1,7 +1,7 @@
 import DefaultFestivalImage from '@/assets/images/festival/common/card-dim-2.png';
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { getDDay } from '@/utils/date';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
@@ -19,15 +19,11 @@ export default function UpcomingFestivalCard({
     region,
     onPress,
 }: Props) {
-    const [imageError, setImageError] = useState(false);
+    const [failedImageUri, setFailedImageUri] = useState<string | undefined>();
     const { text: dDay } = getDDay(startDate);
 
-    useEffect(() => {
-        setImageError(false);
-    }, [imageUrl]);
-
     const imageSource =
-        imageUrl && !imageError
+        imageUrl && failedImageUri !== imageUrl
             ? { uri: imageUrl }
             : DefaultFestivalImage;
 
@@ -40,7 +36,7 @@ export default function UpcomingFestivalCard({
                 source={imageSource}
                 style={styles.image}
                 resizeMode='cover'
-                onError={() => setImageError(true)}
+                onError={() => setFailedImageUri(imageUrl)}
             />
             <Text
                 style={styles.title}

@@ -1,6 +1,6 @@
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { Image } from 'expo-image';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Easing, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CloseIcon } from '../icons/CloseIcon';
@@ -22,22 +22,18 @@ export default function StampQrModal({
     const { height } = useWindowDimensions();
     const [mounted, setMounted] = useState(visible);
 
-    const translateY = useRef(
-        new Animated.Value(700),
-    ).current;
+    const [translateY] = useState(() => new Animated.Value(700));
 
-    const backdropOpacity = useRef(
-        new Animated.Value(0),
-    ).current;
+    const [backdropOpacity] = useState(() => new Animated.Value(0));
+
+    if (visible && !mounted) setMounted(true);
 
     useEffect(() => {
         if (visible) {
-            setMounted(true);
-
             translateY.setValue(700);
             backdropOpacity.setValue(0);
 
-            Animated.parallel([
+            const animation = Animated.parallel([
                 Animated.timing(translateY, {
                     toValue: 0,
                     duration: 320,
@@ -50,13 +46,13 @@ export default function StampQrModal({
                     duration: 250,
                     useNativeDriver: true,
                 }),
-            ]).start();
-
-            return;
+            ]);
+            animation.start();
+            return () => animation.stop();
         }
 
         if (mounted) {
-            Animated.parallel([
+            const animation = Animated.parallel([
                 Animated.timing(translateY, {
                     toValue: height,
                     duration: 250,
@@ -69,11 +65,13 @@ export default function StampQrModal({
                     duration: 200,
                     useNativeDriver: true,
                 }),
-            ]).start(({ finished }) => {
+            ]);
+            animation.start(({ finished }) => {
                 if (finished) {
                     setMounted(false);
                 }
             });
+            return () => animation.stop();
         }
     }, [
         visible,

@@ -4,7 +4,7 @@ import { mapTourCategory } from '@/constants/tourCategory';
 import { FestivalContent } from '@/types/festival';
 import { TourContent } from '@/types/tour';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { CategoryBadge } from './CategoryBadge';
+import { TourAttractionCard } from '../tour/TourAttractionCard';
 import { FestivalCategoryBadge } from './FestivalCategoryBadge';
 import { FestivalStatusBadge } from './FestivalStatusBadge';
 
@@ -21,10 +21,15 @@ type Props =
   };
 
 export const MainItemBlock = (props: Props) => {
-  const content =
-    props.type === 'festival'
-      ? props.festival
-      : props.tour;
+  if (props.type === 'tour') {
+    const category = mapTourCategory(props.tour.category);
+    if (!category) return null;
+    return <TourAttractionCard attraction={{
+      id: props.tour.tourSpotId, title: props.tour.title, address: props.tour.address,
+      distance: props.tour.distance ?? '', category, imageUrls: [props.tour.imageUrl ?? ''],
+    }} onPress={props.onPress} />;
+  }
+  const content = props.festival;
 
   const {
     imageUrl,
@@ -61,27 +66,13 @@ export const MainItemBlock = (props: Props) => {
           >
             {title}
           </Text>
-          {props.type === 'festival' ? (
-            <>
-              <Text style={styles.text}>{props.festival.gunguName}</Text>
-              <Text style={styles.text}>{props.festival.eventStartDate.replace(/-/g, '.')} ~ {props.festival.eventEndDate.replace(/-/g, '.')}</Text>
-            </>
-          ) : (
-            <Text style={styles.text}>
-              {props.tour.distance ? `${props.tour.distance} · ` : ''}
-              {props.tour.address}
-            </Text>
-          )}
+          <>
+            <Text style={styles.text}>{props.festival.gunguName}</Text>
+            <Text style={styles.text}>{props.festival.eventStartDate.replace(/-/g, '.')} ~ {props.festival.eventEndDate.replace(/-/g, '.')}</Text>
+          </>
         </View>
 
-        {props.type === 'festival' ? (
-          <FestivalCategoryBadge category={category} />
-        ) : (
-          (() => {
-            const tourCategory = mapTourCategory(category);
-            return tourCategory ? <CategoryBadge category={tourCategory} /> : null;
-          })()
-        )}
+        <FestivalCategoryBadge category={category} />
       </View>
     </Pressable>
   )

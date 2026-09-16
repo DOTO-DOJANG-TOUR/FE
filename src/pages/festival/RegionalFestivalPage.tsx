@@ -1,3 +1,4 @@
+import { PageLoadingIndicator } from '@/components/common/PageLoadingIndicator';
 import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import { getRegionalFestivals } from '@/apis/festival';
 import { AlertModal } from '@/components/common/AlertModal';
@@ -10,7 +11,7 @@ import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { FestivalContent } from '@/types/festival';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = {
@@ -172,9 +173,7 @@ export const RegionalFestivalPage = ({
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator
-            color={Colors.pink.pink50}
-          />
+          <PageLoadingIndicator />
         </View>
       ) : hasRegionalFestivals ? (
         <>
@@ -210,9 +209,7 @@ export const RegionalFestivalPage = ({
             ListFooterComponent={
               isFetchingMore ? (
                 <View style={styles.footerLoading}>
-                  <ActivityIndicator
-                    color={Colors.pink.pink50}
-                  />
+                  <PageLoadingIndicator />
                 </View>
               ) : null
             }

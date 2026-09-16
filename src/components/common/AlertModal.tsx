@@ -10,6 +10,7 @@ type Props = {
   confirmTextColor?: string;
   onClose: () => void;
   onConfirm: () => void;
+  singleLineDescription?: boolean;
 };
 
 export const AlertModal = ({
@@ -21,6 +22,7 @@ export const AlertModal = ({
   confirmTextColor = '#FF4032',
   onClose,
   onConfirm,
+  singleLineDescription = false,
 }: Props) => {
   return (
     <Modal
@@ -33,7 +35,8 @@ export const AlertModal = ({
       <View style={styles.overlay}>
         <View style={styles.content}>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.description}>{description}</Text>
+          <Text style={styles.description} numberOfLines={singleLineDescription ? 1 : undefined}
+            adjustsFontSizeToFit={singleLineDescription} minimumFontScale={0.8}>{description}</Text>
           <View style={styles.buttonContainer}>
             {cancelText &&
               <Pressable
@@ -69,9 +72,10 @@ const styles = StyleSheet.create({
   },
   content: {
     width: 300,
+    maxWidth: '92%',
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 14,
+    paddingBottom: 11,
     borderRadius: 10,
     backgroundColor: '#FFF',
     justifyContent: 'center',
@@ -81,13 +85,16 @@ const styles = StyleSheet.create({
     color: '#262626',
     fontSize: FontSize.md,
     fontFamily: FontFamily.semiBold,
+    includeFontPadding: false,
     lineHeight: FontSize.md * 1.5,
     textAlign: 'center',
   },
   description: {
+    marginTop: 2,
     color: '#262626',
     fontSize: FontSize.sm,
     fontFamily: FontFamily.regular,
+    includeFontPadding: false,
     lineHeight: FontSize.sm * 1.5,
     textAlign: 'center',
   },
@@ -104,11 +111,13 @@ const styles = StyleSheet.create({
     color: '#262626',
     fontSize: FontSize.sm,
     fontFamily: FontFamily.medium,
+    includeFontPadding: false,
     lineHeight: FontSize.sm * 1.5,
   },
   confirmButtonText: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.medium,
+    includeFontPadding: false,
     lineHeight: FontSize.sm * 1.5,
   },
 });

@@ -2,7 +2,7 @@ import { ApiError, isRetryableError, NetworkOfflineError } from "@/apis/client";
 import { getMyStamps } from "@/apis/stamp";
 import { AlertModal } from "@/components/common/AlertModal";
 import { ErrorModal } from "@/components/common/ErrorModal";
-import { LoadingIndicator } from "@/components/common/LoadingIndicator";
+import { PageLoadingIndicator } from "@/components/common/PageLoadingIndicator";
 import FestivalMainTitle from "@/components/festival/main/FestivalMainTitle";
 import { EmptyIcon } from "@/components/icons/EmptyIcon";
 import { InfoIcon } from "@/components/icons/InfoIcon";
@@ -41,6 +41,8 @@ export default function StampPage() {
             const fetchMyStamp = async () => {
                 try {
                     setIsLoading(true);
+                    setFailedRequest(null);
+                    setInfoError(null);
 
                     const data = await getMyStamps();
 
@@ -84,13 +86,39 @@ export default function StampPage() {
             return () => {
                 isMounted = false;
             };
+        // 재시도 시 포커스 조회를 다시 실행한다.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [reloadTrigger])
     );
 
-    if (isLoading) {
+    if (isLoading || !myStamps) {
         return (
             <View style={styles.loadingContainer}>
-                <LoadingIndicator />
+                {isLoading && <PageLoadingIndicator />}
+                <ErrorModal
+                    visible={failedRequest !== null}
+                    title={
+                        failedRequest?.isOffline
+                            ? '오프라인 상태예요'
+                            : undefined
+                    }
+                    description={
+                        failedRequest?.isOffline
+                            ? '인터넷 연결을 확인한 후 다시 시도해 주세요.'
+                            : undefined
+                    }
+                    onCancel={() => { setFailedRequest(null); router.replace("/(tabs)/tour"); }}
+                    onRetry={retryFailedRequest}
+                />
+
+                <AlertModal
+                    visible={infoError !== null}
+                    title="오류"
+                    description={infoError ?? ''}
+                    confirmText="확인"
+                    onClose={() => { setInfoError(null); router.replace("/(tabs)/tour"); }}
+                    onConfirm={() => { setInfoError(null); router.replace("/(tabs)/tour"); }}
+                />
             </View>
         );
     }

@@ -9,7 +9,13 @@ const KOREAN_TO_TOUR_CATEGORY: Record<string, TourCategory> = {
   체험: 'experience',
 };
 
-export function mapTourCategory(category: string): TourCategory | null {
+const CODE_TO_TOUR_CATEGORY: Record<string, TourCategory> = {
+  VE: 'culture', HS: 'history', NA: 'nature', EX: 'experience',
+};
+
+export function mapTourCategory(value: string | null | undefined): TourCategory | null {
+  const category = value?.trim() ?? '';
+  if (CODE_TO_TOUR_CATEGORY[category]) return CODE_TO_TOUR_CATEGORY[category];
   if (KOREAN_TO_TOUR_CATEGORY[category]) return KOREAN_TO_TOUR_CATEGORY[category];
 
   // GET /api/v1/stamp-tour 스웨거 예시엔 "자연관광지"처럼 접미사가 붙은 값이 있어서(다른 엔드포인트의
@@ -17,4 +23,3 @@ export function mapTourCategory(category: string): TourCategory | null {
   const prefixMatch = Object.keys(KOREAN_TO_TOUR_CATEGORY).find((key) => category.startsWith(key));
   return prefixMatch ? KOREAN_TO_TOUR_CATEGORY[prefixMatch] : null;
 }
-

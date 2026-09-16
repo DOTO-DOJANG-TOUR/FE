@@ -10,7 +10,7 @@ function toRadians(deg: number) {
   return (deg * Math.PI) / 180;
 }
 
-function distanceMeters(a: GeoPoint, b: GeoPoint): number {
+export function distanceMeters(a: GeoPoint, b: GeoPoint): number {
   const dLat = toRadians(b.lat - a.lat);
   const dLng = toRadians(b.lng - a.lng);
   const lat1 = toRadians(a.lat);

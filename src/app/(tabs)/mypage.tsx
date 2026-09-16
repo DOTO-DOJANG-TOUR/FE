@@ -1,7 +1,7 @@
 import { getMyProfile, withdrawMembership } from '@/apis/members';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ErrorModal } from '@/components/common/ErrorModal';
-import { LoadingIndicator } from '@/components/common/LoadingIndicator';
+import { PageLoadingIndicator } from '@/components/common/PageLoadingIndicator';
 import { ProfileEmptyIcon } from '@/components/icons';
 import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
@@ -121,7 +121,7 @@ export default function MyPageScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.centerContainer}>
-          <LoadingIndicator />
+          <PageLoadingIndicator />
         </View>
       </SafeAreaView>
     );

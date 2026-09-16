@@ -12,19 +12,19 @@ import JeonnamImage from '@/assets/images/festival/main/festival-main-jeonnam.jp
 import SeoulImage from '@/assets/images/festival/main/festival-main-seoul.jpg';
 import { AlertModal } from '@/components/common/AlertModal';
 import { ErrorModal } from '@/components/common/ErrorModal';
-import { LoadingIndicator } from '@/components/common/LoadingIndicator';
 import FestivalMainHeader from "@/components/festival/main/FestivalMainHeader";
 import FestivalMainTitle from "@/components/festival/main/FestivalMainTitle";
 import RegionCategoryCard from "@/components/festival/main/RegionCategoryCard";
 import TodayFestivalCard from "@/components/festival/main/TodayFestivalCard";
 import UpcomingFestivalCard from '@/components/festival/main/UpcomingFestivalCard';
+import { PageLoadingIndicator } from '@/components/common/PageLoadingIndicator';
 import { EmptyIcon } from '@/components/icons/EmptyIcon';
 import { Colors, FontFamily, FontSize, Spacing } from "@/constants/theme";
 import { Festival } from '@/types/festival';
 import { Asset } from 'expo-asset';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const regionCategories = [
@@ -385,7 +385,7 @@ export const FestivalMainPage = () => {
     if (isLoading) {
         return (
             <View style={styles.loadingContainer}>
-                <LoadingIndicator />
+                <PageLoadingIndicator />
             </View>
         );
     }
@@ -410,9 +410,7 @@ export const FestivalMainPage = () => {
                         title={hasTodayFestivals ? "지금 도장 투어 가능해요" : undefined}
                     />
                     {isTodayLoading ? (
-                        <ActivityIndicator
-                            color={Colors.pink.pink50}
-                        />
+                        <PageLoadingIndicator />
                     ) : hasTodayFestivals ? (
                         <FlatList
                             data={todayFestivals}
@@ -444,9 +442,7 @@ export const FestivalMainPage = () => {
                             ListFooterComponent={
                                 isFetchingTodayMore ? (
                                     <View style={styles.horizontalLoading}>
-                                        <ActivityIndicator
-                                            color={Colors.pink.pink50}
-                                        />
+                                        <PageLoadingIndicator />
                                     </View>
                                 ) : null
                             }
@@ -498,9 +494,7 @@ export const FestivalMainPage = () => {
                         title="곧 개최 예정인 축제"
                     />
                     {isUpcomingLoading ? (
-                        <ActivityIndicator
-                            color={Colors.pink.pink50}
-                        />
+                        <PageLoadingIndicator />
                     ) : hasUpcomingFestivals ? (
                         <FlatList
                             data={upcomingFestivals}
@@ -531,9 +525,7 @@ export const FestivalMainPage = () => {
                             ListFooterComponent={
                                 isFetchingUpcomingMore ? (
                                     <View style={styles.horizontalLoading}>
-                                        <ActivityIndicator
-                                            color={Colors.pink.pink50}
-                                        />
+                                        <PageLoadingIndicator />
                                     </View>
                                 ) : null
                             }

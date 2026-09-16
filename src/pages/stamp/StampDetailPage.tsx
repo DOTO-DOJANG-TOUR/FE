@@ -1,3 +1,4 @@
+import { PageLoadingIndicator } from '@/components/common/PageLoadingIndicator';
 import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import { getMyStampsDetail, getRewardQr } from '@/apis/stamp';
 import DefaultFestivalImage from '@/assets/images/festival/common/card-dim-3.png';
@@ -28,7 +29,8 @@ export default function FestivalDetailPage({
 }: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [imageError, setImageError] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [failedImageUri, setFailedImageUri] = useState<string | undefined>();
 
   const [stampDetail, setStampDetail] =
     useState<MyTourStampDetail | null>(null);
@@ -59,6 +61,9 @@ export default function FestivalDetailPage({
 
     const fetchStampDetail = async () => {
       try {
+        setPageLoading(true);
+        setFailedRequest(null);
+        setInfoError(null);
         const data = await getMyStampsDetail(festivalId);
 
         if (!isMounted) {
@@ -89,6 +94,8 @@ export default function FestivalDetailPage({
               : '정보를 불러오지 못했어요.',
           );
         }
+      } finally {
+        if (isMounted) setPageLoading(false);
       }
     };
 
@@ -99,18 +106,12 @@ export default function FestivalDetailPage({
     };
   }, [festivalId, reloadTrigger]);
 
-  useEffect(() => {
-    setImageError(false);
-  }, [stampDetail?.festivalImgUrl]);
-
-  if (!stampDetail) {
+  if (pageLoading || !stampDetail) {
     return (
       <View style={styles.container}>
-        {!failedRequest && !infoError && (
+        {pageLoading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator
-              color={Colors.pink.pink50}
-            />
+            <PageLoadingIndicator />
           </View>
         )}
 
@@ -126,9 +127,7 @@ export default function FestivalDetailPage({
               ? '인터넷 연결을 확인한 후 다시 시도해 주세요.'
               : undefined
           }
-          onCancel={() =>
-            setFailedRequest(null)
-          }
+          onCancel={() => { setFailedRequest(null); router.back(); }}
           onRetry={retryFailedRequest}
         />
 
@@ -137,12 +136,8 @@ export default function FestivalDetailPage({
           title="오류"
           description={infoError ?? ''}
           confirmText="확인"
-          onClose={() =>
-            setInfoError(null)
-          }
-          onConfirm={() =>
-            setInfoError(null)
-          }
+          onClose={() => { setInfoError(null); router.back(); }}
+          onConfirm={() => { setInfoError(null); router.back(); }}
         />
       </View>
     );
@@ -154,7 +149,7 @@ export default function FestivalDetailPage({
   );
 
   const imageSource =
-    stampDetail?.festivalImgUrl && !imageError
+    stampDetail?.festivalImgUrl && failedImageUri !== stampDetail?.festivalImgUrl
       ? { uri: stampDetail.festivalImgUrl }
       : DefaultFestivalImage;
 
@@ -205,6 +200,7 @@ export default function FestivalDetailPage({
       >
         <ImageBackground
           source={imageSource}
+          onError={() => setFailedImageUri(stampDetail.festivalImgUrl)}
           style={styles.imageSection}
           resizeMode="cover"
         >
