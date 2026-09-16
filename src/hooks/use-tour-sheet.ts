@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, type PanResponderGestureState } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 
@@ -14,6 +14,19 @@ export function useTourSheet({ expanded, collapsedHeight, expandedHeight, onExpa
   const dragging = useRef(false);
   const bodyCanDrag = useRef(false);
 
+  const springTo = useCallback((targetExpanded: boolean) => {
+    Animated.spring(height, {
+      toValue: targetExpanded ? expandedHeight : collapsedHeight,
+      damping: 24, stiffness: 220, mass: 0.8, useNativeDriver: false,
+    }).start();
+  }, [collapsedHeight, expandedHeight, height]);
+
+  const snapTo = useCallback((targetExpanded: boolean) => {
+    dragging.current = false;
+    if (targetExpanded === expanded) springTo(targetExpanded);
+    else onExpandedChange(targetExpanded);
+  }, [expanded, onExpandedChange, springTo]);
+
   useEffect(() => {
     const id = height.addListener(({ value }) => { currentHeight.current = value; });
     return () => height.removeListener(id);
@@ -27,15 +40,6 @@ export function useTourSheet({ expanded, collapsedHeight, expandedHeight, onExpa
   }, [expanded, collapsedHeight, expandedHeight, height]);
 
   const responders = useMemo(() => {
-    const snap = (targetExpanded: boolean) => {
-      dragging.current = false;
-      onExpandedChange(targetExpanded);
-      // 같은 스냅 위치로 놓아도 중간 높이에 걸리지 않도록 직접 복귀시킨다.
-      Animated.spring(height, {
-        toValue: targetExpanded ? expandedHeight : collapsedHeight,
-        damping: 24, stiffness: 220, mass: 0.8, useNativeDriver: false,
-      }).start();
-    };
     const shouldCapture = (gesture: PanResponderGestureState) =>
       Math.abs(gesture.dy) > 8 && Math.abs(gesture.dy) > Math.abs(gesture.dx) * 1.2;
     const handlers = {
@@ -48,10 +52,10 @@ export function useTourSheet({ expanded, collapsedHeight, expandedHeight, onExpa
           height.setValue(Math.max(collapsedHeight, Math.min(expandedHeight, startHeight.current - gesture.dy)));
         },
         onPanResponderRelease: (_: unknown, gesture: PanResponderGestureState) => {
-          if (Math.abs(gesture.dy) >= 24 || Math.abs(gesture.vy) > 0.5) snap(gesture.dy < 0);
-          else snap(expanded);
+          if (Math.abs(gesture.dy) >= 24 || Math.abs(gesture.vy) > 0.5) snapTo(gesture.dy < 0);
+          else snapTo(expanded);
         },
-        onPanResponderTerminate: () => snap(expanded),
+        onPanResponderTerminate: () => snapTo(expanded),
         onPanResponderTerminationRequest: () => !dragging.current,
     };
     return {
@@ -62,7 +66,7 @@ export function useTourSheet({ expanded, collapsedHeight, expandedHeight, onExpa
         onMoveShouldSetPanResponderCapture: (_, gesture) => shouldCapture(gesture),
       }),
     };
-  }, [expanded, collapsedHeight, expandedHeight, height, onExpandedChange]);
+  }, [expanded, collapsedHeight, expandedHeight, height, snapTo]);
 
   const nativeScrollGesture = useMemo(() => Gesture.Native(), []);
   // Gesture builder는 이벤트 콜백을 등록하며 render 중 ref를 읽지 않는다.
@@ -84,17 +88,14 @@ export function useTourSheet({ expanded, collapsedHeight, expandedHeight, onExpa
     .onEnd((event) => {
       if (!dragging.current) return;
       const targetExpanded = event.translationY < 24 && event.velocityY < 500 ? expanded : false;
-      onExpandedChange(targetExpanded);
-      Animated.spring(height, { toValue: targetExpanded ? expandedHeight : collapsedHeight,
-        damping: 24, stiffness: 220, mass: 0.8, useNativeDriver: false }).start();
-      dragging.current = false;
+      snapTo(targetExpanded);
     })
     .onFinalize(() => {
       if (!dragging.current) return;
       dragging.current = false;
       Animated.spring(height, { toValue: expanded ? expandedHeight : collapsedHeight,
         damping: 24, stiffness: 220, mass: 0.8, useNativeDriver: false }).start();
-    }), [nativeScrollGesture, collapsedHeight, expandedHeight, expanded, height, onExpandedChange]);
+  }), [nativeScrollGesture, collapsedHeight, expandedHeight, expanded, height, snapTo]);
   /* eslint-enable react-hooks/refs */
 
   return {

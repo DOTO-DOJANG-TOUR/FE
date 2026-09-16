@@ -9,7 +9,7 @@ import { Animated, Linking, Pressable, ScrollView, StyleSheet, Text, View, useWi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TourAsset } from './TourAsset';
 import { TourImage } from './TourImage';
-import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { GestureDetector } from 'react-native-gesture-handler';
 
 type Props = {
   attraction: TourAttraction; expanded: boolean; visited: boolean;
@@ -38,12 +38,15 @@ export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, 
     expanded, collapsedHeight, expandedHeight, onExpandedChange,
   });
   const photos = attraction.imageUrls.filter((uri) => uri?.trim());
+  const photoSlots = Array.from({ length: 4 }, (_, index) => photos[index] ?? '');
+  const address = attraction.address.trim() || '-';
+  const phone = attraction.phone?.trim() || '';
+  const homepage = attraction.homepage?.trim() || '';
   const openLink = async (url: string) => {
     try { await Linking.openURL(url); } catch { setLinkError(true); }
   };
 
   return <>
-    <GestureHandlerRootView style={styles.gestureRoot} pointerEvents="box-none">
     <Animated.View style={[styles.sheet, { height }]}>
       <View {...headerPanHandlers}>
         <Pressable accessibilityRole="button" accessibilityLabel={expanded ? '관광지 상세 최소화' : '관광지 상세 최대화'}
@@ -64,15 +67,15 @@ export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, 
         contentContainerStyle={styles.scrollContent}>
         <View style={styles.content} onLayout={(event) => setBodyHeight(event.nativeEvent.layout.height)}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
-            {(photos.length ? photos : ['']).map((uri, index) => <TourImage key={`${attraction.id}-${index}`}
+            {photoSlots.map((uri, index) => <TourImage key={`${attraction.id}-${index}`}
               uri={uri} style={{ width: (width - 40 - 21) / 4, height: 80 }} />)}
           </ScrollView>
           <View style={styles.infoGroup}>
-            <InfoRow icon="space" text={attraction.address} />
-            {!!attraction.phone?.trim() && <InfoRow icon="call" text={attraction.phone}
-              onPress={() => openLink(`tel:${attraction.phone}`)} />}
-            {!!attraction.homepage?.trim() && <InfoRow icon="page" text="홈페이지 바로가기" isLink
-              onPress={() => openLink(attraction.homepage!)} />}
+            <InfoRow icon="space" text={address} />
+            <InfoRow icon="call" text={phone || '-'}
+              onPress={phone ? () => openLink(`tel:${phone}`) : undefined} />
+            <InfoRow icon="page" text={homepage ? '홈페이지 바로가기' : '-'} isLink={!!homepage}
+              onPress={homepage ? () => openLink(homepage) : undefined} />
           </View>
         </View>
       </ScrollView></GestureDetector></View></GestureDetector>
@@ -85,7 +88,6 @@ export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, 
           }} />
       </View>
     </Animated.View>
-    </GestureHandlerRootView>
     <AlertModal visible={confirmVisible} title="이 관광지를 방문할까요?"
       description="7시간 이내에 도착하면 도장을 획득합니다." singleLineDescription
       cancelText="취소" confirmText="방문" confirmTextColor={Colors.pink.pink50}
@@ -105,7 +107,6 @@ function InfoRow({ icon, text, isLink, onPress }: {
 
 export const TOUR_DETAIL_SHEET_HEIGHT = { collapsed: COLLAPSED_HEIGHT } as const;
 const styles = StyleSheet.create({
-  gestureRoot: { ...StyleSheet.absoluteFill },
   sheet: { position: 'absolute', right: 0, bottom: 0, left: 0, overflow: 'hidden',
     borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: Colors.gray.gray00,
     boxShadow: TourColors.sheetShadow },

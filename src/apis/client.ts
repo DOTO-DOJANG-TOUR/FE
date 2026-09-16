@@ -9,6 +9,27 @@ import NetInfo from '@react-native-community/netinfo';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
 const DEFAULT_TIMEOUT_MS = 10000;
+const HTTP_DATE_PRECISION_MIDPOINT_MS = 500;
+
+let serverClockOffsetMs: number | null = null;
+
+function syncServerClock(response: Response, requestStartedAt: number) {
+  const serverDate = response.headers.get('Date');
+  if (!serverDate) return;
+
+  const serverDateMs = Date.parse(serverDate);
+  if (!Number.isFinite(serverDateMs)) return;
+
+  const receivedAt = Date.now();
+  const halfRoundTripMs = Math.max(0, receivedAt - requestStartedAt) / 2;
+  // HTTP Date는 초 단위라 해당 초의 중간값을 사용하고, 왕복 시간의 절반만큼 수신 시각으로 보정한다.
+  serverClockOffsetMs =
+    serverDateMs + HTTP_DATE_PRECISION_MIDPOINT_MS + halfRoundTripMs - receivedAt;
+}
+
+export function getServerNowMs() {
+  return Date.now() + (serverClockOffsetMs ?? 0);
+}
 
 export class NetworkOfflineError extends Error {
   constructor() {
@@ -119,12 +140,14 @@ export async function refreshAuthSession(): Promise<AuthSession> {
 
     await assertOnline();
 
+    const requestStartedAt = Date.now();
     const response = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
       method: 'POST',
       signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
     });
+    syncServerClock(response, requestStartedAt);
     const body = await readBody(response);
 
     const error = getApiError(
@@ -170,6 +193,7 @@ export async function apiFetch<T>(
   await assertOnline();
 
   const accessToken = skipAuth ? null : await getToken(TOKEN_KEYS.ACCESS_TOKEN);
+  const requestStartedAt = Date.now();
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
     signal: init.signal ?? AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
@@ -179,6 +203,7 @@ export async function apiFetch<T>(
       ...init.headers,
     },
   });
+  syncServerClock(response, requestStartedAt);
 
   if (response.status === 401 && !skipAuth && !skipRefresh) {
     await refreshAuthSession();

@@ -10,7 +10,18 @@ type Props = {
   showCategory?: boolean;
 };
 
+const ADDRESS_MAX_LENGTH = 12;
+
+function truncateAddress(address: string) {
+  const characters = Array.from(address);
+  return characters.length > ADDRESS_MAX_LENGTH
+    ? `${characters.slice(0, ADDRESS_MAX_LENGTH).join('')}...`
+    : address;
+}
+
 export function TourAttractionCard({ attraction, onPress, showCategory = true }: Props) {
+  const address = truncateAddress(attraction.address);
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -26,7 +37,7 @@ export function TourAttractionCard({ attraction, onPress, showCategory = true }:
           </Text>
           <Text numberOfLines={2} style={styles.subtitle}>
             {attraction.distance ? `${attraction.distance} · ` : ''}
-            {attraction.address}
+            {address}
           </Text>
         </View>
         {showCategory && <TourCategoryBadge category={attraction.category} />}

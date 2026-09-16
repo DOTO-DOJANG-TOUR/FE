@@ -2,7 +2,7 @@ import { getTourSpotDetail } from '@/apis/tour';
 import { distanceMeters } from '@/utils/geo';
 import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
 import type { LocationProblem } from '@/utils/locationPolicy';
-import { ApiError } from '@/apis/client';
+import { ApiError, getServerNowMs } from '@/apis/client';
 import { createTourSpotStamp, stopTourSpotVisit } from '@/apis/tourVisit';
 import { AlertModal } from '@/components/common/AlertModal';
 import { DojangTourButton } from '@/components/common/DojangTourButton';
@@ -24,10 +24,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // #41(stamp-detail) 머지 전까지 임시로 비활성화. 머지 후 true로 바꾸고 라우트를 연결한다.
 const STAMP_DETAIL_ROUTE_AVAILABLE = false;
+const MAX_VISIT_DURATION_MS = 7 * 60 * 60 * 1000;
 
 function formatCountdown(remainingMs: number) {
   // 남은 시간이 실제로 만료되기 전에 00:00:00이 먼저 표시되지 않도록 올림한다.
-  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+  const totalSeconds = Math.max(0, Math.ceil(Math.min(remainingMs, MAX_VISIT_DURATION_MS) / 1000));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
@@ -90,7 +91,9 @@ export default function TourCheckInPage() {
     };
 
     const tick = () => {
-      const remaining = new Date(expiresAt).getTime() - Date.now();
+      // 방문 API 응답의 Date 헤더로 보정한 서버 시각을 사용한다. 기기 시계가 서버보다
+      // 느려도 07:00:xx로 시작하지 않으며, 백그라운드·재진입 후에도 expiresAt은 그대로다.
+      const remaining = new Date(expiresAt).getTime() - getServerNowMs();
       setRemainingMs(Math.max(0, remaining));
 
       if (remaining <= 0 && !expirationHandledRef.current) {
@@ -130,6 +133,10 @@ export default function TourCheckInPage() {
         return;
       }
       const spot = await getTourSpotDetail(festivalId, tourSpotId);
+      if (!spot) {
+        setRetryVisible(true);
+        return;
+      }
       const target = { lat: Number(spot.mapY), lng: Number(spot.mapX) };
       if (!spot.mapY?.trim() || !spot.mapX?.trim() || !Number.isFinite(target.lat) ||
         !Number.isFinite(target.lng) || Math.abs(target.lat) > 90 || Math.abs(target.lng) > 180) {

@@ -103,7 +103,9 @@ export default function TourVisitPage() {
         if (isMounted) {
           setDetail(spotDetail);
           setSpots(allSpots);
-          setCachedTourSpot(festivalId, attractionId, { detail: spotDetail, spots: allSpots });
+          if (spotDetail) {
+            setCachedTourSpot(festivalId, attractionId, { detail: spotDetail, spots: allSpots });
+          }
         }
       } catch (error) {
         console.error('관광지 상세 조회 실패:', error);
@@ -141,13 +143,13 @@ export default function TourVisitPage() {
 
     return {
       id: detail.tourSpotId,
-      title: detail.title,
-      address: detail.address,
+      title: detail.title.trim() || '관광지',
+      address: detail.address.trim(),
       category,
       // 상세 화면(TourDetailBottomSheet)엔 거리를 보여주는 UI가 없어 계산하지 않는다.
       distance: '',
-      imageUrls: detail.imageList?.filter((uri) => uri?.trim()).length ? detail.imageList : [detail.imageUrl ?? ''],
-      phone: detail.phone,
+      imageUrls: detail.imageList.length ? detail.imageList : detail.imageUrl ? [detail.imageUrl] : [],
+      phone: detail.phone?.trim() || undefined,
     };
   }, [detail]);
 
@@ -158,7 +160,8 @@ export default function TourVisitPage() {
         const category = mapTourCategory(spot.category);
         const point: GeoPoint = { lat: Number(spot.mapY), lng: Number(spot.mapX) };
 
-        if (!category || !Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return null;
+        if (!category || !spot.mapY.trim() || !spot.mapX.trim() ||
+          !Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return null;
 
         return { id: spot.tourSpotId, category, point };
       })
@@ -184,7 +187,8 @@ export default function TourVisitPage() {
 
     const lat = Number(detail.mapY);
     const lng = Number(detail.mapX);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (!detail.mapY.trim() || !detail.mapX.trim() ||
+      !Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
     hasFocusedInitiallyRef.current = true;
     // 권장 줌 레벨 3, 애니메이션 없이 즉시 배치(#37).
@@ -259,7 +263,7 @@ export default function TourVisitPage() {
     }
   };
 
-  if (!isLoading && !attraction) {
+  if (!isLoading && !attraction && !failedRequest) {
     return (
       <View style={styles.notFoundContainer}>
         <Text style={styles.notFoundText}>관광지 정보를 찾을 수 없어요.</Text>
