@@ -87,8 +87,9 @@ const styles = StyleSheet.create({
   },
   text: {
     color: '#A8A8A8',
-    fontSize: FontSize.sm,
-    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.xs,
+    lineHeight: 18,
+    includeFontPadding: false, fontFamily: FontFamily.semiBold,
   },
   selectedText: {
     color: '#FFF'

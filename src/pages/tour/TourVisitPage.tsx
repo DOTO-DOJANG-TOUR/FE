@@ -1,6 +1,10 @@
 import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import { getTourSpotDetail, getTourSpots } from '@/apis/tour';
 import { startTourSpotVisit } from '@/apis/tourVisit';
+import { LoadingIndicator } from '@/components/common/LoadingIndicator';
+import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
+import { useCurrentLocation } from '@/hooks/use-current-location';
+import type { LocationProblem } from '@/utils/locationPolicy';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { MarkerGroupPicker, type MarkerGroupOption } from '@/components/tour/MarkerGroupPicker';
 import {
@@ -17,7 +21,7 @@ import { groupByCoordinate, type GeoPoint } from '@/utils/geo';
 import { getCachedTourSpot, setCachedTourSpot } from '@/utils/tourSpotCache';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 const DUPLICATE_VISIT_ERROR_CODES = new Set([
   'STAMP-TOUR-409-002',
@@ -34,6 +38,9 @@ export default function TourVisitPage() {
     visited?: string;
   }>();
 
+  const { coords: userLocation, checkLocation, requestLocation } = useCurrentLocation();
+  const [locationProblem, setLocationProblem] = useState<LocationProblem | null>(null);
+  useEffect(() => { void checkLocation(); }, [checkLocation]);
   const [expanded, setExpanded] = useState(true);
   const [visited, setVisited] = useState(visitedParam === '1');
   // 투어 메인 화면에서 이동하기 전에 미리 받아둔 데이터가 있으면(#37, tourSpotCache 참고)
@@ -139,7 +146,7 @@ export default function TourVisitPage() {
       category,
       // 상세 화면(TourDetailBottomSheet)엔 거리를 보여주는 UI가 없어 계산하지 않는다.
       distance: '',
-      imageUrls: detail.imageList,
+      imageUrls: detail.imageList?.filter((uri) => uri?.trim()).length ? detail.imageList : [detail.imageUrl ?? ''],
       phone: detail.phone,
     };
   }, [detail]);
@@ -264,7 +271,7 @@ export default function TourVisitPage() {
     <View style={styles.container}>
       {!attraction ? (
         <View style={styles.loadingContainer}>
-          {showLoadingIndicator && <ActivityIndicator color={Colors.pink.pink50} />}
+          {showLoadingIndicator && <LoadingIndicator />}
         </View>
       ) : (
         <>
@@ -272,6 +279,7 @@ export default function TourVisitPage() {
             ref={mapRef}
             markers={markers}
             selectedMarkerId={attractionId}
+            currentLocation={userLocation}
             showLocationButton={false}
             locationBottom={
               expanded
@@ -294,6 +302,12 @@ export default function TourVisitPage() {
             }}
             onExpandedChange={setExpanded}
             onVisited={handleVisit}
+            onRequestVisit={async () => {
+              setLocationProblem(null);
+              const result = await requestLocation();
+              if (result.problem) { setLocationProblem(result.problem); return false; }
+              return !!result.coords;
+            }}
           />
         </>
       )}
@@ -330,6 +344,8 @@ export default function TourVisitPage() {
         onCancel={() => setDuplicateVisitMessage(null)}
         onRetry={() => setDuplicateVisitMessage(null)}
       />
+
+      <LocationProblemModal problem={locationProblem} purpose="visit" onClose={() => setLocationProblem(null)} />
 
       <MarkerGroupPicker
         visible={groupPickerOptions !== null}

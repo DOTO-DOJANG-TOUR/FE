@@ -1,9 +1,11 @@
 import { getFestivalDetail } from '@/apis/festival';
 import { geocodeAddress } from '@/apis/kakaoLocal';
-import { isRetryableError, NetworkOfflineError } from '@/apis/client';
+import { NetworkOfflineError } from '@/apis/client';
 import { getMyStampTour } from '@/apis/stamp';
 import { getTourSpotDetail, getTourSpots } from '@/apis/tour';
-import { AlertModal } from '@/components/common/AlertModal';
+import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
+import { TourAsset } from '@/components/tour/TourAsset';
+import type { LocationProblem } from '@/utils/locationPolicy';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { LoadingIndicator } from '@/components/common/LoadingIndicator';
 import { TOUR_SHEET_HEIGHT, TourBottomSheet } from '@/components/tour/TourBottomSheet';
@@ -11,7 +13,7 @@ import { MarkerGroupPicker, type MarkerGroupOption } from '@/components/tour/Mar
 import { TourMap, type TourMapHandle, type TourMapMarker } from '@/components/tour/TourMap';
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { mapTourCategory } from '@/constants/tourCategory';
-import { TourColors, TourTypography } from '@/constants/tourTheme';
+import { TourColors } from '@/constants/tourTheme';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useDelayedLoading } from '@/hooks/use-delayed-loading';
 import type { StampTourDetail, TourAttraction, TourFilterCategory } from '@/types/tour';
@@ -19,7 +21,7 @@ import { groupByCoordinate, parseDistanceMeters, selectNearbySpots, type GeoPoin
 import { getCachedTourSpot, setCachedTourSpot } from '@/utils/tourSpotCache';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 type AttractionWithPoint = { attraction: TourAttraction; point: GeoPoint };
 
@@ -37,8 +39,10 @@ export default function TourMainPage() {
     retry: () => void;
     isOffline: boolean;
   } | null>(null);
-  const [locationDeniedDismissed, setLocationDeniedDismissed] = useState(false);
-  const [locationUnavailableVisible, setLocationUnavailableVisible] = useState(false);
+  const [locationProblem, setLocationProblem] = useState<LocationProblem | null>(null);
+  const [sheetHeight, setSheetHeight] = useState<number>(TOUR_SHEET_HEIGHT.collapsed);
+  const [stampCountFresh, setStampCountFresh] = useState(false);
+  const locationRequestRef = useRef(false);
   // 진행 중인 스탬프 투어가 바뀌면(예: 투어 중단 후 다른 투어 시작) festivalId도 바뀌는데,
   // 새 축제의 좌표 조회(geocodeAddress)가 실패하면 이전 축제의 center가 남아 다른 축제의
   // 관광지 좌표와 함께 bounds 계산에 섞여 들어갈 수 있다. 어느 축제의 center인지 같이
@@ -59,8 +63,6 @@ export default function TourMainPage() {
   const mapRef = useRef<TourMapHandle>(null);
   const {
     coords: userLocation,
-    permission: locationPermission,
-    canAskAgain: locationCanAskAgain,
     requestLocation,
     checkLocation,
   } = useCurrentLocation();
@@ -74,11 +76,12 @@ export default function TourMainPage() {
       const fetchStampTour = async () => {
         try {
           setIsLoading(true);
+          setStampCountFresh(false);
           const result = await getMyStampTour();
-          if (isMounted) setStampTour(result);
+          if (isMounted) { setStampTour(result); setStampCountFresh(true); }
         } catch (error) {
           console.error('스탬프 투어 조회 실패:', error);
-          if (isMounted && isRetryableError(error)) {
+          if (isMounted) {
             setFailedRequest({
               retry: () => setReloadTrigger((prev) => prev + 1),
               isOffline: error instanceof NetworkOfflineError,
@@ -106,9 +109,6 @@ export default function TourMainPage() {
     checkLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const locationDeniedVisible =
-    locationPermission === 'denied' && !locationCanAskAgain && !locationDeniedDismissed;
 
   const festivalId = stampTour?.festivalId;
 
@@ -258,34 +258,20 @@ export default function TourMainPage() {
   };
 
   const handleLocationPress = async () => {
-    if (userLocation) {
-      mapRef.current?.focusOnCurrentLocation(userLocation.lat, userLocation.lng);
-      return;
-    }
-
-    const result = await requestLocation();
-
-    if (result.coords) {
-      mapRef.current?.focusOnCurrentLocation(result.coords.lat, result.coords.lng);
-      return;
-    }
-
-    if (result.permission === 'denied') {
-      // 이미 닫았던 안내를 다시 눌렀을 때는 재노출한다.
-      setLocationDeniedDismissed(false);
-      return;
-    }
-
-    // 권한은 있는데(granted) 기기 위치 서비스가 꺼져 있는 등 좌표 자체를 못 가져온 경우.
-    setLocationUnavailableVisible(true);
+    if (locationRequestRef.current) return;
+    locationRequestRef.current = true;
+    setLocationProblem(null);
+    try {
+      const result = await requestLocation();
+      if (result.coords) mapRef.current?.focusOnCurrentLocation(result.coords.lat, result.coords.lng);
+      else setLocationProblem(result.problem);
+    } finally { locationRequestRef.current = false; }
   };
 
-  if (empty === '1' || (!isLoading && !stampTour)) {
+  if (empty === '1' || (!isLoading && !stampTour && !failedRequest)) {
     return (
       <View style={styles.noTourContainer}>
-        <View style={styles.noTourIcon}>
-          <Text style={styles.noTourIconText}>×</Text>
-        </View>
+        <TourAsset name="empty" />
         <Text style={styles.noTourText}>
           {'참여 중인 투어가 없어요.\n축제를 선택하고 투어를 시작해 보세요.'}
         </Text>
@@ -306,7 +292,7 @@ export default function TourMainPage() {
             markers={markers}
             currentLocation={userLocation}
             locationBottom={
-              expanded ? TOUR_SHEET_HEIGHT.expanded + 20 : TOUR_SHEET_HEIGHT.collapsed + 20
+              sheetHeight + 20
             }
             onSearchPress={() => router.push({ pathname: '/search/tour', params: { festivalId } })}
             onLocationPress={handleLocationPress}
@@ -316,7 +302,8 @@ export default function TourMainPage() {
           <TourBottomSheet
             expanded={expanded}
             title={stampTour.title}
-            stampCount={stampTour.stampCount}
+            stampCount={stampCountFresh ? stampTour.stampCount : null}
+            onHeightChange={setSheetHeight}
             selectedCategory={selectedCategory}
             attractions={attractions}
             onExpandedChange={setExpanded}
@@ -351,27 +338,7 @@ export default function TourMainPage() {
         }}
       />
 
-      <AlertModal
-        visible={locationDeniedVisible}
-        title="위치 권한이 필요해요"
-        description={'설정에서 위치 권한을 허용하면\n내 위치와 거리순 정렬을 이용할 수 있어요.'}
-        cancelText="닫기"
-        confirmText="설정 열기"
-        onClose={() => setLocationDeniedDismissed(true)}
-        onConfirm={() => {
-          setLocationDeniedDismissed(true);
-          Linking.openSettings();
-        }}
-      />
-
-      <AlertModal
-        visible={locationUnavailableVisible}
-        title="위치를 가져올 수 없어요"
-        description={'기기의 위치 서비스(GPS)가 켜져 있는지\n확인한 후 다시 시도해 주세요.'}
-        confirmText="확인"
-        onClose={() => setLocationUnavailableVisible(false)}
-        onConfirm={() => setLocationUnavailableVisible(false)}
-      />
+      <LocationProblemModal problem={locationProblem} purpose="map" onClose={() => setLocationProblem(null)} />
 
       <MarkerGroupPicker
         visible={groupPickerOptions !== null}
@@ -412,21 +379,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: Colors.gray.gray00,
   },
-  noTourIcon: {
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: Colors.gray.gray50,
-    borderRadius: Radius.full,
-  },
-  noTourIconText: {
-    color: Colors.gray.gray50,
-    fontSize: TourTypography.compact,
-  },
   noTourText: {
+    marginTop: 4,
     color: Colors.gray.gray60,
     fontSize: FontSize.sm,
     lineHeight: FontSize.sm * 1.5,
