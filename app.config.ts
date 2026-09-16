@@ -16,6 +16,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'expo-build-properties',
         {
           android: {
+            usesCleartextTraffic: true,
+
             extraMavenRepos: ['https://devrepo.kakao.com/nexus/content/groups/public/'],
           },
         },
