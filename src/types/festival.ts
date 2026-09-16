@@ -45,7 +45,7 @@ export type FestivalDetail = {
   operationHours: string;
   restDate: string;
   useFee: string;
-  parkingFee: string;
+  eventPeriod: string;
 };
 
 export type DojangTourStatusResult = {

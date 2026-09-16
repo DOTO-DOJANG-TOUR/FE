@@ -1,4 +1,7 @@
+import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import { searchFestivals, searchTours } from '@/apis/search';
+import { AlertModal } from '@/components/common/AlertModal';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { MainItemBlock } from '@/components/common/MainItemBlock';
 import { DeleteIcon } from '@/components/icons/DeleteIcon';
 import { EmptyIcon } from '@/components/icons/EmptyIcon';
@@ -41,6 +44,21 @@ export default function SearchPage({
     useState<string | null>(null);
   const [isFetchingMore, setIsFetchingMore] =
     useState(false);
+
+  const [failedRequest, setFailedRequest] = useState<{
+    retry: () => void;
+    isOffline: boolean;
+  } | null>(null);
+
+  const [infoError, setInfoError] =
+    useState<string | null>(null);
+
+  const retryFailedRequest = () => {
+    const request = failedRequest;
+
+    setFailedRequest(null);
+    request?.retry();
+  };
 
   const recentSearches = useRecentSearchStore(
     (state) => state.recentSearches[type]
@@ -122,6 +140,20 @@ export default function SearchPage({
       }
 
       setSearchStatus('success');
+
+      if (isRetryableError(error)) {
+        setFailedRequest({
+          retry: () => handleSearch(trimmedKeyword),
+          isOffline:
+            error instanceof NetworkOfflineError,
+        });
+      } else {
+        setInfoError(
+          error instanceof ApiError
+            ? error.message
+            : '검색에 실패했어요.',
+        );
+      }
     }
   };
 
@@ -155,6 +187,20 @@ export default function SearchPage({
         '축제 검색 추가 조회 실패:',
         error
       );
+
+      if (isRetryableError(error)) {
+        setFailedRequest({
+          retry: fetchMoreFestivalResults,
+          isOffline:
+            error instanceof NetworkOfflineError,
+        });
+      } else {
+        setInfoError(
+          error instanceof ApiError
+            ? error.message
+            : '정보를 더 불러오지 못했어요.',
+        );
+      }
     } finally {
       setIsFetchingMore(false);
     }
@@ -308,6 +354,31 @@ export default function SearchPage({
           </Text>
         </View>
       )}
+
+      <ErrorModal
+        visible={failedRequest !== null}
+        title={
+          failedRequest?.isOffline
+            ? '오프라인 상태예요'
+            : undefined
+        }
+        description={
+          failedRequest?.isOffline
+            ? '인터넷 연결을 확인한 후 다시 시도해 주세요.'
+            : undefined
+        }
+        onCancel={() => setFailedRequest(null)}
+        onRetry={retryFailedRequest}
+      />
+
+      <AlertModal
+        visible={infoError !== null}
+        title="오류"
+        description={infoError ?? ''}
+        confirmText="확인"
+        onClose={() => setInfoError(null)}
+        onConfirm={() => setInfoError(null)}
+      />
     </View>
   )
 }

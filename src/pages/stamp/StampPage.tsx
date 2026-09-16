@@ -1,6 +1,9 @@
+import { ApiError, isRetryableError, NetworkOfflineError } from "@/apis/client";
 import { getMyStamps } from "@/apis/stamp";
-import FestivalMainTitle from "@/components/festival/main/FestivalMainTitle";
+import { AlertModal } from "@/components/common/AlertModal";
+import { ErrorModal } from "@/components/common/ErrorModal";
 import { LoadingIndicator } from "@/components/common/LoadingIndicator";
+import FestivalMainTitle from "@/components/festival/main/FestivalMainTitle";
 import { EmptyIcon } from "@/components/icons/EmptyIcon";
 import { InfoIcon } from "@/components/icons/InfoIcon";
 import StampItemCard from "@/components/stamp/StampItemCard";
@@ -17,24 +20,71 @@ export default function StampPage() {
     const [myStamps, setMyStamps] = useState<TourStampListResult | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    const [failedRequest, setFailedRequest] = useState<{
+        retry: () => void;
+        isOffline: boolean;
+    } | null>(null);
+    const [reloadTrigger, setReloadTrigger] = useState(0);
+    const [infoError, setInfoError] = useState<string | null>(null);
+
+    const retryFailedRequest = () => {
+        const request = failedRequest;
+
+        setFailedRequest(null);
+        request?.retry();
+    };
+
     useFocusEffect(
         useCallback(() => {
+            let isMounted = true;
+
             const fetchMyStamp = async () => {
                 try {
                     setIsLoading(true);
 
                     const data = await getMyStamps();
 
+                    if (!isMounted) {
+                        return;
+                    }
+
                     setMyStamps(data);
                 } catch (error) {
                     console.error('내 스탬프 조회 실패:', error);
+
+                    if (!isMounted) {
+                        return;
+                    }
+
+                    if (isRetryableError(error)) {
+                        setFailedRequest({
+                            retry: () =>
+                                setReloadTrigger(
+                                    (prev) => prev + 1
+                                ),
+                            isOffline:
+                                error instanceof NetworkOfflineError,
+                        });
+                    } else {
+                        setInfoError(
+                            error instanceof ApiError
+                                ? error.message
+                                : '정보를 불러오지 못했어요.',
+                        );
+                    }
                 } finally {
-                    setIsLoading(false);
+                    if (isMounted) {
+                        setIsLoading(false);
+                    }
                 }
             };
 
             fetchMyStamp();
-        }, [])
+
+            return () => {
+                isMounted = false;
+            };
+        }, [reloadTrigger])
     );
 
     if (isLoading) {
@@ -56,7 +106,7 @@ export default function StampPage() {
         >
             <FestivalMainTitle
                 subtitle="도장 현황"
-                title={`${myStamps?.rewardedTourCount}개의 보상을 받았어요`}
+                title={`${myStamps?.rewardedTourCount ?? 0}개의 보상을 받았어요`}
             />
             <View style={styles.rewardInfoBox}>
                 <InfoIcon />
@@ -96,6 +146,31 @@ export default function StampPage() {
                     </View>
                 </View>
             )}
+
+            <ErrorModal
+                visible={failedRequest !== null}
+                title={
+                    failedRequest?.isOffline
+                        ? '오프라인 상태예요'
+                        : undefined
+                }
+                description={
+                    failedRequest?.isOffline
+                        ? '인터넷 연결을 확인한 후 다시 시도해 주세요.'
+                        : undefined
+                }
+                onCancel={() => setFailedRequest(null)}
+                onRetry={retryFailedRequest}
+            />
+
+            <AlertModal
+                visible={infoError !== null}
+                title="오류"
+                description={infoError ?? ''}
+                confirmText="확인"
+                onClose={() => setInfoError(null)}
+                onConfirm={() => setInfoError(null)}
+            />
         </View>
     )
 }
