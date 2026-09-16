@@ -1,6 +1,4 @@
 import { TourAsset } from './TourAsset';
-import { LoadingIndicator } from '@/components/common/LoadingIndicator';
-import { useDelayedLoading } from '@/hooks/use-delayed-loading';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { TourColors } from '@/constants/tourTheme';
@@ -50,6 +48,10 @@ type Props = {
   onSearchPress?: () => void;
   onLocationPress?: () => void;
   onMarkerPress?: (markerId: string) => void;
+  // 지도 SDK 준비/실패 시점을 부모에 알린다 — 페이지 전체 로딩(TourMainPage)이
+  // 이 시점까지 지도·바텀시트를 함께 가려서, 컴포넌트 단위가 아니라 페이지 단위로 로딩이 보이게 한다.
+  onReady?: () => void;
+  onLoadError?: () => void;
 };
 
 type WebViewProps = ComponentProps<typeof WebView>;
@@ -64,6 +66,8 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
     onSearchPress,
     onLocationPress,
     onMarkerPress,
+    onReady,
+    onLoadError,
   },
   ref,
 ) {
@@ -76,10 +80,16 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
 
-  const showLoading = useDelayedLoading(!isReady && !loadError);
-
   const html = useMemo(() => getKakaoMapHtml(KAKAO_JAVASCRIPT_KEY ?? ''), []);
   const webViewSource = useMemo(() => ({ html, baseUrl: 'http://localhost' }), [html]);
+
+  useEffect(() => {
+    if (isReady) onReady?.();
+  }, [isReady, onReady]);
+
+  useEffect(() => {
+    if (loadError) onLoadError?.();
+  }, [loadError, onLoadError]);
 
   useEffect(() => {
     if (isReady || loadError) return;
@@ -214,19 +224,13 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
         onMessage={handleMessage}
       />
 
-      {loadError ? (
+      {loadError && (
         <View style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
           <Text style={styles.errorText}>지도를 불러오지 못했어요</Text>
           <Pressable accessibilityRole="button" style={styles.retryButton} onPress={handleRetry}>
             <Text style={styles.retryButtonText}>다시 시도</Text>
           </Pressable>
         </View>
-      ) : (
-        showLoading && (
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
-            <LoadingIndicator />
-          </View>
-        )
       )}
 
       <View style={[styles.searchRow, { top: insets.top + 20 }]}>

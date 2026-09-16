@@ -112,6 +112,22 @@ export default function TourMainPage() {
 
   const festivalId = stampTour?.festivalId;
 
+  // 지도 SDK 준비 여부 — 바텀시트/검색바 등 나머지 UI도 이 시점까지 같이 가려서
+  // 컴포넌트 단위가 아니라 페이지 전체가 한 번에 로딩되도록 한다.
+  const [mapReady, setMapReady] = useState(false);
+  const [mapLoadError, setMapLoadError] = useState(false);
+  const showMapLoadingIndicator = useDelayedLoading(!mapReady && !mapLoadError);
+
+  // 투어가 바뀌면(중단 후 다른 투어 시작 등) TourMap이 새로 마운트되어 다시 로딩되므로 같이
+  // 초기화한다(React 공식 "Adjusting state on prop change" 패턴 — useEffect로 하면
+  // set-state-in-effect 린트에 걸리고 한 프레임 늦게 반영된다).
+  const [prevFestivalId, setPrevFestivalId] = useState(festivalId);
+  if (festivalId !== prevFestivalId) {
+    setPrevFestivalId(festivalId);
+    setMapReady(false);
+    setMapLoadError(false);
+  }
+
   // 축제 좌표(mapX/mapY) API가 없어서(docs/OPEN_QUESTIONS.md "C" 참고), 축제 상세의 address를
   // 카카오 로컬 API로 좌표 변환해 초기 지도 중심 보정에 쓴다. 실패해도 관광지 bounds로 대체되므로
   // 재시도·에러 모달 없이 best-effort로 처리한다.
@@ -298,6 +314,8 @@ export default function TourMainPage() {
             onSearchPress={() => router.push({ pathname: '/search/tour', params: { festivalId } })}
             onLocationPress={handleLocationPress}
             onMarkerPress={handleMarkerPress}
+            onReady={() => setMapReady(true)}
+            onLoadError={() => setMapLoadError(true)}
           />
 
           <TourBottomSheet
@@ -314,6 +332,14 @@ export default function TourMainPage() {
             }}
             onAttractionPress={handleAttractionPress}
           />
+
+          {/* 지도 SDK가 뜰 때까지 바텀시트·검색바까지 같이 가려서 컴포넌트 단위가 아닌
+              페이지 단위 로딩으로 보이게 한다. 에러가 나면 TourMap 자체의 재시도 UI로 넘긴다. */}
+          {!mapReady && !mapLoadError && (
+            <View style={[StyleSheet.absoluteFill, styles.loadingContainer, styles.mapLoadingOverlay]}>
+              {showMapLoadingIndicator && <LoadingIndicator />}
+            </View>
+          )}
         </>
       )}
 
@@ -361,6 +387,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  mapLoadingOverlay: {
+    backgroundColor: Colors.gray.gray20,
   },
   navigatingBadge: {
     position: 'absolute',

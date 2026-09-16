@@ -382,7 +382,9 @@ export const FestivalMainPage = () => {
         }
     };
 
-    if (isLoading) {
+    // 오늘의 축제/개최 예정 축제 섹션은 항상 같이 조회되므로(reloadTrigger 공유), 셋 다
+    // 끝날 때까지 페이지 전체를 로딩으로 덮는다 — 섹션별로 따로 로띠가 뜨지 않게 한다.
+    if (isLoading || isTodayLoading || isUpcomingLoading) {
         return (
             <View style={styles.loadingContainer}>
                 <PageLoadingIndicator />
@@ -409,9 +411,7 @@ export const FestivalMainPage = () => {
                         subtitle="오늘의 축제"
                         title={hasTodayFestivals ? "지금 도장 투어 가능해요" : undefined}
                     />
-                    {isTodayLoading ? (
-                        <PageLoadingIndicator />
-                    ) : hasTodayFestivals ? (
+                    {hasTodayFestivals ? (
                         <FlatList
                             data={todayFestivals}
                             horizontal
@@ -493,9 +493,7 @@ export const FestivalMainPage = () => {
                     <FestivalMainTitle
                         title="곧 개최 예정인 축제"
                     />
-                    {isUpcomingLoading ? (
-                        <PageLoadingIndicator />
-                    ) : hasUpcomingFestivals ? (
+                    {hasUpcomingFestivals ? (
                         <FlatList
                             data={upcomingFestivals}
                             horizontal
