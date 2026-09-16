@@ -1,3 +1,7 @@
+import { getTourSpotDetail } from '@/apis/tour';
+import { distanceMeters } from '@/utils/geo';
+import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
+import type { LocationProblem } from '@/utils/locationPolicy';
 import { ApiError } from '@/apis/client';
 import { createTourSpotStamp, stopTourSpotVisit } from '@/apis/tourVisit';
 import { AlertModal } from '@/components/common/AlertModal';
@@ -15,7 +19,7 @@ import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useTourVisitStore } from '@/stores/tourVisitStore';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // #41(stamp-detail) 머지 전까지 임시로 비활성화. 머지 후 true로 바꾸고 라우트를 연결한다.
@@ -51,8 +55,8 @@ export default function TourCheckInPage() {
   const expirationHandledRef = useRef(false);
   const [exitConfirmVisible, setExitConfirmVisible] = useState(false);
   const [tooFarVisible, setTooFarVisible] = useState(false);
-  const [locationDeniedVisible, setLocationDeniedVisible] = useState(false);
-  const [locationUnavailableVisible, setLocationUnavailableVisible] = useState(false);
+  const [locationProblem, setLocationProblem] = useState<LocationProblem | null>(null);
+  const arrivalPending = useRef(false);
   const [retryVisible, setRetryVisible] = useState(false);
 
   const navigateBack = () => {
@@ -77,8 +81,7 @@ export default function TourCheckInPage() {
       // 모두 닫고 서버 상태 복원이 끝난 뒤 체크인 화면을 강제로 종료한다.
       setExitConfirmVisible(false);
       setTooFarVisible(false);
-      setLocationDeniedVisible(false);
-      setLocationUnavailableVisible(false);
+      setLocationProblem(null);
       setRetryVisible(false);
       setSubmitting(false);
 
@@ -110,22 +113,34 @@ export default function TourCheckInPage() {
   }, [status, completed, completionRestoring]);
 
   const handleArrival = async () => {
+    if (arrivalPending.current || completed) return;
     if (!festivalId || !tourSpotId) {
       setRetryVisible(true);
       return;
     }
 
+    arrivalPending.current = true;
     setSubmitting(true);
+    setTooFarVisible(false);
+    setLocationProblem(null);
     try {
       const result = await requestLocation();
       if (!result.coords) {
-        if (result.permission === 'denied') {
-          setLocationDeniedVisible(true);
-        } else {
-          // 권한은 있지만 GPS가 좌표를 주지 못한 경우다. 서버 요청 실패가 아니므로
-          // 일반 "일시적인 오류"와 구분해 위치 서비스를 확인하도록 안내한다.
-          setLocationUnavailableVisible(true);
-        }
+        setLocationProblem(result.problem);
+        return;
+      }
+      const spot = await getTourSpotDetail(festivalId, tourSpotId);
+      const target = { lat: Number(spot.mapY), lng: Number(spot.mapX) };
+      if (!spot.mapY?.trim() || !spot.mapX?.trim() || !Number.isFinite(target.lat) ||
+        !Number.isFinite(target.lng) || Math.abs(target.lat) > 90 || Math.abs(target.lng) > 180) {
+        setRetryVisible(true);
+        return;
+      }
+      // 위치 조회 중 만료되거나 다른 방문으로 전환됐으면 이전 방문에 인증하지 않는다.
+      const active = useTourVisitStore.getState();
+      if (expirationHandledRef.current || active.tourSpotId !== tourSpotId || active.status !== 'active') return;
+      if (distanceMeters(result.coords, target) > 300) {
+        setTooFarVisible(true);
         return;
       }
 
@@ -149,6 +164,7 @@ export default function TourCheckInPage() {
       setRetryVisible(true);
     } finally {
       // 위치 권한 요청 자체가 예외를 던져도 버튼이 영구 비활성화되지 않게 한다.
+      arrivalPending.current = false;
       setSubmitting(false);
     }
   };
@@ -287,29 +303,7 @@ export default function TourCheckInPage() {
         onConfirm={() => setTooFarVisible(false)}
       />
 
-      <AlertModal
-        visible={locationDeniedVisible}
-        title="위치 권한이 필요해요"
-        description={'방문 인증을 위해\n위치 권한을 허용해 주세요.'}
-        cancelText="닫기"
-        confirmText="설정으로 이동"
-        confirmTextColor={Colors.blue.blue30}
-        onClose={() => setLocationDeniedVisible(false)}
-        onConfirm={() => {
-          setLocationDeniedVisible(false);
-          Linking.openSettings();
-        }}
-      />
-
-      <AlertModal
-        visible={locationUnavailableVisible}
-        title="현재 위치를 확인할 수 없어요"
-        description={'기기 위치 서비스를 켜거나 위치를 설정한 후\n다시 시도해 주세요.'}
-        confirmText="확인"
-        confirmTextColor={Colors.blue.blue30}
-        onClose={() => setLocationUnavailableVisible(false)}
-        onConfirm={() => setLocationUnavailableVisible(false)}
-      />
+      <LocationProblemModal problem={locationProblem} purpose="visit" onClose={() => setLocationProblem(null)} />
 
       <ErrorModal
         visible={retryVisible}
