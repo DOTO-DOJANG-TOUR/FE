@@ -1,3 +1,5 @@
+import { PageLoadingIndicator } from '@/components/common/PageLoadingIndicator';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { getFestivalDetail, getFestivalDojangTourStatus } from '@/apis/festival';
 import { startStampTour, stopStampTour } from '@/apis/stamp';
 import DefaultFestivalImage from '@/assets/images/festival/common/card-dim-3.png';
@@ -25,9 +27,12 @@ type Props = {
 export default function FestivalDetailPage({
     festivalId,
 }: Props) {
+  const [pageLoading, setPageLoading] = useState(true);
+  const [pageError, setPageError] = useState(false);
+  const [reload, setReload] = useState(0);
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const [imageError, setImageError] = useState(false);
+    const [failedImageUri, setFailedImageUri] = useState<string | undefined>();
     const [isStopModalVisible, setIsStopModalVisible] = useState(false);
 
     const formatMultilineText = (value?: string) => {
@@ -47,19 +52,19 @@ export default function FestivalDetailPage({
     const [dojangStatus, setDojangStatus] =
         useState<DojangTourButtonStatus | null>(null);
 
-    useEffect(() => {
-        const fetchFestivalDetail = async () => {
-            try {
-                const data = await getFestivalDetail(festivalId);
-
-                setFestival(data);
-            } catch (error) {
-                console.error('축제 상세 조회 실패:', error);
-            }
-        };
-
-        fetchFestivalDetail();
-    }, [festivalId]);
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      setPageLoading(true);
+      setPageError(false);
+      await getFestivalDetail(festivalId).then((data) => {
+      if (active) setFestival(data);
+    }).catch(() => { if (active) setPageError(true); })
+      .finally(() => { if (active) setPageLoading(false); });
+    };
+    void load();
+    return () => { active = false; };
+  }, [festivalId, reload]);
 
     useEffect(() => {
         const fetchDojangStatus = async () => {
@@ -81,16 +86,16 @@ export default function FestivalDetailPage({
         fetchDojangStatus();
     }, [festivalId]);
 
-    useEffect(() => {
-        setImageError(false);
-    }, [festival?.imageUrl]);
-
-    if (!festival) {
-        return null;
-    }
+  if (pageLoading || !festival || pageError) {
+    return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.gray.gray00 }}>
+      {pageLoading && <PageLoadingIndicator />}
+      <ErrorModal visible={pageError} onCancel={() => router.back()}
+        onRetry={() => setReload((value) => value + 1)} />
+    </View>;
+  }
 
     const imageSource =
-        festival.imageUrl && !imageError
+        festival.imageUrl && failedImageUri !== festival?.imageUrl
             ? { uri: festival.imageUrl }
             : DefaultFestivalImage;
 
@@ -155,6 +160,7 @@ export default function FestivalDetailPage({
             >
                 <ImageBackground
                     source={imageSource}
+          onError={() => setFailedImageUri(festival.imageUrl)}
                     style={styles.imageSection}
                     resizeMode="cover"
                 >

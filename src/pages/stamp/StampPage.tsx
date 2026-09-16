@@ -1,6 +1,7 @@
+import { ErrorModal } from "@/components/common/ErrorModal";
 import { getMyStamps } from "@/apis/stamp";
 import FestivalMainTitle from "@/components/festival/main/FestivalMainTitle";
-import { LoadingIndicator } from "@/components/common/LoadingIndicator";
+import { PageLoadingIndicator } from "@/components/common/PageLoadingIndicator";
 import { EmptyIcon } from "@/components/icons/EmptyIcon";
 import { InfoIcon } from "@/components/icons/InfoIcon";
 import StampItemCard from "@/components/stamp/StampItemCard";
@@ -16,31 +17,40 @@ export default function StampPage() {
     const insets = useSafeAreaInsets();
     const [myStamps, setMyStamps] = useState<TourStampListResult | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [failed, setFailed] = useState(false);
+    const [reload, setReload] = useState(0);
 
     useFocusEffect(
         useCallback(() => {
+            let active = true;
             const fetchMyStamp = async () => {
                 try {
                     setIsLoading(true);
+                    setFailed(false);
 
                     const data = await getMyStamps();
 
-                    setMyStamps(data);
-                } catch (error) {
-                    console.error('내 스탬프 조회 실패:', error);
+                    if (active) setMyStamps(data);
+                } catch {
+                    if (active) setFailed(true);
                 } finally {
-                    setIsLoading(false);
+                    if (active) setIsLoading(false);
                 }
             };
 
             fetchMyStamp();
-        }, [])
+            return () => { active = false; };
+        // 재시도 시 포커스 조회를 다시 실행한다.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [reload])
     );
 
-    if (isLoading) {
+    if (isLoading || failed || !myStamps) {
         return (
             <View style={styles.loadingContainer}>
-                <LoadingIndicator />
+                {isLoading && <PageLoadingIndicator />}
+                <ErrorModal visible={failed} onCancel={() => router.replace("/(tabs)/tour")}
+                    onRetry={() => setReload((value) => value + 1)} />
             </View>
         );
     }

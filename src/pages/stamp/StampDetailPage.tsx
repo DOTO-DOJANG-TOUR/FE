@@ -1,3 +1,5 @@
+import { PageLoadingIndicator } from '@/components/common/PageLoadingIndicator';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { getMyStampsDetail, getRewardQr } from '@/apis/stamp';
 import DefaultFestivalImage from '@/assets/images/festival/common/card-dim-3.png';
 import { DojangTourButton } from '@/components/common/DojangTourButton';
@@ -23,9 +25,12 @@ type Props = {
 export default function FestivalDetailPage({
   festivalId,
 }: Props) {
+  const [pageLoading, setPageLoading] = useState(true);
+  const [pageError, setPageError] = useState(false);
+  const [reload, setReload] = useState(0);
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [imageError, setImageError] = useState(false);
+  const [failedImageUri, setFailedImageUri] = useState<string | undefined>();
 
   const [stampDetail, setStampDetail] =
     useState<MyTourStampDetail | null>(null);
@@ -37,29 +42,25 @@ export default function FestivalDetailPage({
   const [isRewardLoading, setIsRewardLoading] = useState(false);
 
   useEffect(() => {
-    const fetchStampDetail = async () => {
-      try {
-        const data = await getMyStampsDetail(festivalId);
-
-        setStampDetail(data);
-      } catch (error) {
-        console.error('스탬프 상세 조회 실패:', error);
-      }
+    let active = true;
+    const load = async () => {
+      setPageLoading(true);
+      setPageError(false);
+      await getMyStampsDetail(festivalId).then((data) => {
+      if (active) setStampDetail(data);
+    }).catch(() => { if (active) setPageError(true); })
+      .finally(() => { if (active) setPageLoading(false); });
     };
+    void load();
+    return () => { active = false; };
+  }, [festivalId, reload]);
 
-    fetchStampDetail();
-  }, [festivalId]);
-
-  useEffect(() => {
-    setImageError(false);
-  }, [stampDetail?.festivalImgUrl]);
-
-  if (!stampDetail) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator color={Colors.pink.pink50} />
-      </View>
-    );
+  if (pageLoading || !stampDetail || pageError) {
+    return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.gray.gray00 }}>
+      {pageLoading && <PageLoadingIndicator />}
+      <ErrorModal visible={pageError} onCancel={() => router.back()}
+        onRetry={() => setReload((value) => value + 1)} />
+    </View>;
   }
 
   const dojangStatus = mapStampDetailDojangStatus(
@@ -68,7 +69,7 @@ export default function FestivalDetailPage({
   );
 
   const imageSource =
-    stampDetail?.festivalImgUrl && !imageError
+    stampDetail?.festivalImgUrl && failedImageUri !== stampDetail?.festivalImgUrl
       ? { uri: stampDetail.festivalImgUrl }
       : DefaultFestivalImage;
 
@@ -105,6 +106,7 @@ export default function FestivalDetailPage({
       >
         <ImageBackground
           source={imageSource}
+          onError={() => setFailedImageUri(stampDetail.festivalImgUrl)}
           style={styles.imageSection}
           resizeMode="cover"
         >

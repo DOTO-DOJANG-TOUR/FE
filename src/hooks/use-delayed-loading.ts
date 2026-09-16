@@ -10,5 +10,5 @@ export function useDelayedLoading(isLoading: boolean, delayMs = 200) {
     return () => clearTimeout(timer);
   }, [isLoading, delayMs]);
 
-  return showLoading;
+  return isLoading && showLoading;
 }
