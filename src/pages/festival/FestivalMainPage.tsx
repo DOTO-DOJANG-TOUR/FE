@@ -1,3 +1,4 @@
+import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import { getTodayFestivals, getUpcomingFestivals } from '@/apis/festival';
 import ChungbukImage from '@/assets/images/festival/main/festival-main-chungbuk.jpg';
 import ChungnamImage from '@/assets/images/festival/main/festival-main-chungnam.jpg';
@@ -9,6 +10,8 @@ import JejuImage from '@/assets/images/festival/main/festival-main-jeju.jpg';
 import JeonbukImage from '@/assets/images/festival/main/festival-main-jeonbuk.jpg';
 import JeonnamImage from '@/assets/images/festival/main/festival-main-jeonnam.jpg';
 import SeoulImage from '@/assets/images/festival/main/festival-main-seoul.jpg';
+import { AlertModal } from '@/components/common/AlertModal';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import FestivalMainHeader from "@/components/festival/main/FestivalMainHeader";
 import FestivalMainTitle from "@/components/festival/main/FestivalMainTitle";
 import RegionCategoryCard from "@/components/festival/main/RegionCategoryCard";
@@ -108,6 +111,13 @@ export const FestivalMainPage = () => {
     const [isFetchingUpcomingMore, setIsFetchingUpcomingMore] =
         useState(false);
 
+    const [failedRequest, setFailedRequest] = useState<{
+        retry: () => void;
+        isOffline: boolean;
+    } | null>(null);
+    const [reloadTrigger, setReloadTrigger] = useState(0);
+    const [infoError, setInfoError] = useState<string | null>(null);
+
 
     const hasTodayFestivals = todayFestivals.length > 0;
     const hasUpcomingFestivals = upcomingFestivals.length > 0;
@@ -145,6 +155,12 @@ export const FestivalMainPage = () => {
         };
     }, []);
 
+    const retryFailedRequest = () => {
+        const request = failedRequest;
+        setFailedRequest(null);
+        request?.retry();
+    };
+
     useEffect(() => {
         let isMounted = true;
 
@@ -171,6 +187,23 @@ export const FestivalMainPage = () => {
                     '오늘의 축제 조회 실패:',
                     error
                 );
+
+                if (!isMounted) {
+                    return;
+                }
+
+                if (isRetryableError(error)) {
+                    setFailedRequest({
+                        retry: () => setReloadTrigger((prev) => prev + 1),
+                        isOffline: error instanceof NetworkOfflineError,
+                    });
+                } else {
+                    setInfoError(
+                        error instanceof ApiError
+                            ? error.message
+                            : '정보를 불러오지 못했어요.',
+                    );
+                }
             } finally {
                 if (isMounted) {
                     setIsTodayLoading(false);
@@ -183,7 +216,7 @@ export const FestivalMainPage = () => {
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [reloadTrigger]);
 
     useEffect(() => {
         let isMounted = true;
@@ -213,6 +246,23 @@ export const FestivalMainPage = () => {
                     '개최 예정 축제 조회 실패:',
                     error
                 );
+
+                if (!isMounted) {
+                    return;
+                }
+                
+                if (isRetryableError(error)) {
+                    setFailedRequest({
+                        retry: () => setReloadTrigger((prev) => prev + 1),
+                        isOffline: error instanceof NetworkOfflineError,
+                    });
+                } else {
+                    setInfoError(
+                        error instanceof ApiError
+                            ? error.message
+                            : '정보를 불러오지 못했어요.',
+                    );
+                }
             } finally {
                 if (isMounted) {
                     setIsUpcomingLoading(false);
@@ -225,7 +275,7 @@ export const FestivalMainPage = () => {
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [reloadTrigger]);
 
     const fetchMoreTodayFestivals = async () => {
         if (!todayNextCursor || isFetchingTodayMore) {
@@ -260,6 +310,19 @@ export const FestivalMainPage = () => {
                 '오늘의 축제 추가 조회 실패:',
                 error
             );
+            if (isRetryableError(error)) {
+                setFailedRequest({
+                    retry: fetchMoreTodayFestivals,
+                    isOffline:
+                        error instanceof NetworkOfflineError,
+                });
+            } else {
+                setInfoError(
+                    error instanceof ApiError
+                        ? error.message
+                        : '정보를 불러오지 못했어요.',
+                );
+            }
         } finally {
             setIsFetchingTodayMore(false);
         }
@@ -301,6 +364,19 @@ export const FestivalMainPage = () => {
                 '개최 예정 축제 추가 조회 실패:',
                 error
             );
+            if (isRetryableError(error)) {
+                setFailedRequest({
+                    retry: fetchMoreUpcomingFestivals,
+                    isOffline:
+                        error instanceof NetworkOfflineError,
+                });
+            } else {
+                setInfoError(
+                    error instanceof ApiError
+                        ? error.message
+                        : '정보를 불러오지 못했어요.',
+                );
+            }
         } finally {
             setIsFetchingUpcomingMore(false);
         }
@@ -465,6 +541,25 @@ export const FestivalMainPage = () => {
                     )}
                 </View>
             </ScrollView >
+            <ErrorModal
+                visible={failedRequest !== null}
+                title={failedRequest?.isOffline ? '오프라인 상태예요' : undefined}
+                description={
+                    failedRequest?.isOffline
+                        ? '인터넷 연결을 확인한 후 다시 시도해 주세요.'
+                        : undefined
+                }
+                onCancel={() => setFailedRequest(null)}
+                onRetry={retryFailedRequest}
+            />
+            <AlertModal
+                visible={infoError !== null}
+                title="오류"
+                description={infoError ?? ''}
+                confirmText="확인"
+                onClose={() => setInfoError(null)}
+                onConfirm={() => setInfoError(null)}
+            />
         </View>
     )
 }

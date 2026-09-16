@@ -1,8 +1,10 @@
 import { PageLoadingIndicator } from '@/components/common/PageLoadingIndicator';
-import { ErrorModal } from '@/components/common/ErrorModal';
+import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import { getMyStampsDetail, getRewardQr } from '@/apis/stamp';
 import DefaultFestivalImage from '@/assets/images/festival/common/card-dim-3.png';
+import { AlertModal } from '@/components/common/AlertModal';
 import { DojangTourButton } from '@/components/common/DojangTourButton';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import FestivalMainTitle from '@/components/festival/main/FestivalMainTitle';
 import { BackIcon } from '@/components/icons/BackIcon';
 import { StampDashLineIcon } from '@/components/icons/StampDashLineIcon';
@@ -25,11 +27,9 @@ type Props = {
 export default function FestivalDetailPage({
   festivalId,
 }: Props) {
-  const [pageLoading, setPageLoading] = useState(true);
-  const [pageError, setPageError] = useState(false);
-  const [reload, setReload] = useState(0);
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [pageLoading, setPageLoading] = useState(true);
   const [failedImageUri, setFailedImageUri] = useState<string | undefined>();
 
   const [stampDetail, setStampDetail] =
@@ -37,30 +37,110 @@ export default function FestivalDetailPage({
 
   const [rewardQrImage, setRewardQrImage] = useState<string | null>(null);
   const [rewardCode, setRewardCode] =
-  useState<string | null>(null);
+    useState<string | null>(null);
   const [rewardModalVisible, setRewardModalVisible] = useState(false);
   const [isRewardLoading, setIsRewardLoading] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      setPageLoading(true);
-      setPageError(false);
-      await getMyStampsDetail(festivalId).then((data) => {
-      if (active) setStampDetail(data);
-    }).catch(() => { if (active) setPageError(true); })
-      .finally(() => { if (active) setPageLoading(false); });
-    };
-    void load();
-    return () => { active = false; };
-  }, [festivalId, reload]);
+  const [failedRequest, setFailedRequest] = useState<{
+    retry: () => void;
+    isOffline: boolean;
+  } | null>(null);
 
-  if (pageLoading || !stampDetail || pageError) {
-    return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.gray.gray00 }}>
-      {pageLoading && <PageLoadingIndicator />}
-      <ErrorModal visible={pageError} onCancel={() => router.back()}
-        onRetry={() => setReload((value) => value + 1)} />
-    </View>;
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+  const [infoError, setInfoError] =
+    useState<string | null>(null);
+  const retryFailedRequest = () => {
+    const request = failedRequest;
+
+    setFailedRequest(null);
+    request?.retry();
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchStampDetail = async () => {
+      try {
+        setPageLoading(true);
+        setFailedRequest(null);
+        setInfoError(null);
+        const data = await getMyStampsDetail(festivalId);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setStampDetail(data);
+      } catch (error) {
+        console.error('스탬프 상세 조회 실패:', error);
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (isRetryableError(error)) {
+          setFailedRequest({
+            retry: () =>
+              setReloadTrigger(
+                (prev) => prev + 1
+              ),
+            isOffline:
+              error instanceof NetworkOfflineError,
+          });
+        } else {
+          setInfoError(
+            error instanceof ApiError
+              ? error.message
+              : '정보를 불러오지 못했어요.',
+          );
+        }
+      } finally {
+        if (isMounted) setPageLoading(false);
+      }
+    };
+
+    fetchStampDetail();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [festivalId, reloadTrigger]);
+
+  if (pageLoading || !stampDetail) {
+    return (
+      <View style={styles.container}>
+        {pageLoading && (
+          <View style={styles.loadingContainer}>
+            <PageLoadingIndicator />
+          </View>
+        )}
+
+        <ErrorModal
+          visible={failedRequest !== null}
+          title={
+            failedRequest?.isOffline
+              ? '오프라인 상태예요'
+              : undefined
+          }
+          description={
+            failedRequest?.isOffline
+              ? '인터넷 연결을 확인한 후 다시 시도해 주세요.'
+              : undefined
+          }
+          onCancel={() => { setFailedRequest(null); router.back(); }}
+          onRetry={retryFailedRequest}
+        />
+
+        <AlertModal
+          visible={infoError !== null}
+          title="오류"
+          description={infoError ?? ''}
+          confirmText="확인"
+          onClose={() => { setInfoError(null); router.back(); }}
+          onConfirm={() => { setInfoError(null); router.back(); }}
+        />
+      </View>
+    );
   }
 
   const dojangStatus = mapStampDetailDojangStatus(
@@ -84,6 +164,20 @@ export default function FestivalDetailPage({
       setRewardModalVisible(true);
     } catch (error) {
       console.error('보상 QR 조회 실패:', error);
+
+      if (isRetryableError(error)) {
+        setFailedRequest({
+          retry: handleRewardPress,
+          isOffline:
+            error instanceof NetworkOfflineError,
+        });
+      } else {
+        setInfoError(
+          error instanceof ApiError
+            ? error.message
+            : '보상 QR을 불러오지 못했어요.',
+        );
+      }
     } finally {
       setIsRewardLoading(false);
     }
@@ -248,6 +342,37 @@ export default function FestivalDetailPage({
           onClose={() => setRewardModalVisible(false)}
         />
       )}
+
+      <ErrorModal
+        visible={failedRequest !== null}
+        title={
+          failedRequest?.isOffline
+            ? '오프라인 상태예요'
+            : undefined
+        }
+        description={
+          failedRequest?.isOffline
+            ? '인터넷 연결을 확인한 후 다시 시도해 주세요.'
+            : undefined
+        }
+        onCancel={() =>
+          setFailedRequest(null)
+        }
+        onRetry={retryFailedRequest}
+      />
+
+      <AlertModal
+        visible={infoError !== null}
+        title="오류"
+        description={infoError ?? ''}
+        confirmText="확인"
+        onClose={() =>
+          setInfoError(null)
+        }
+        onConfirm={() =>
+          setInfoError(null)
+        }
+      />
     </View>
   )
 }

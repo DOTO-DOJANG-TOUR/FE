@@ -1,5 +1,8 @@
 import { PageLoadingIndicator } from '@/components/common/PageLoadingIndicator';
+import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import { getRegionalFestivals } from '@/apis/festival';
+import { AlertModal } from '@/components/common/AlertModal';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { MainItemBlock } from '@/components/common/MainItemBlock';
 import RegionalHeader from '@/components/festival/region/RegionalHeader';
 import SortDropdown from '@/components/festival/region/SortDropdown';
@@ -34,6 +37,13 @@ export const RegionalFestivalPage = ({
   const [isFetchingMore, setIsFetchingMore] =
     useState(false);
 
+  const [failedRequest, setFailedRequest] = useState<{
+    retry: () => void;
+    isOffline: boolean;
+  } | null>(null);
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+  const [infoError, setInfoError] = useState<string | null>(null);
+
   const sortOptions = [
     {
       label: '종료 임박순',
@@ -44,6 +54,12 @@ export const RegionalFestivalPage = ({
       value: 'START_DATE',
     },
   ];
+
+  const retryFailedRequest = () => {
+    const request = failedRequest;
+    setFailedRequest(null);
+    request?.retry();
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -68,6 +84,23 @@ export const RegionalFestivalPage = ({
         setNextCursor(result.nextCursor ?? null);
       } catch (error) {
         console.error('지역별 축제 조회 실패:', error);
+        
+        if (!isMounted) {
+          return;
+        }
+
+        if (isRetryableError(error)) {
+          setFailedRequest({
+            retry: () => setReloadTrigger((prev) => prev + 1),
+            isOffline: error instanceof NetworkOfflineError,
+          });
+        } else {
+          setInfoError(
+            error instanceof ApiError
+              ? error.message
+              : '정보를 불러오지 못했어요.',
+          );
+        }
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -80,7 +113,7 @@ export const RegionalFestivalPage = ({
     return () => {
       isMounted = false;
     };
-  }, [regionGroup, sort]);
+  }, [regionGroup, sort, reloadTrigger]);
 
   const fetchMoreFestivals = async () => {
     if (!nextCursor || isFetchingMore) {
@@ -107,6 +140,19 @@ export const RegionalFestivalPage = ({
         '지역별 축제 추가 조회 실패:',
         error
       );
+      if (isRetryableError(error)) {
+        setFailedRequest({
+          retry: fetchMoreFestivals,
+          isOffline:
+            error instanceof NetworkOfflineError,
+        });
+      } else {
+        setInfoError(
+          error instanceof ApiError
+            ? error.message
+            : '정보를 불러오지 못했어요.',
+        );
+      }
     } finally {
       setIsFetchingMore(false);
     }
@@ -178,6 +224,25 @@ export const RegionalFestivalPage = ({
           </Text>
         </View>
       )}
+      <ErrorModal
+        visible={failedRequest !== null}
+        title={failedRequest?.isOffline ? '오프라인 상태예요' : undefined}
+        description={
+          failedRequest?.isOffline
+            ? '인터넷 연결을 확인한 후 다시 시도해 주세요.'
+            : undefined
+        }
+        onCancel={() => setFailedRequest(null)}
+        onRetry={retryFailedRequest}
+      />
+      <AlertModal
+        visible={infoError !== null}
+        title="오류"
+        description={infoError ?? ''}
+        confirmText="확인"
+        onClose={() => setInfoError(null)}
+        onConfirm={() => setInfoError(null)}
+      />
     </View>
   )
 }

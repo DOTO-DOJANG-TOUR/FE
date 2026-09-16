@@ -1,10 +1,11 @@
 import { PageLoadingIndicator } from '@/components/common/PageLoadingIndicator';
-import { ErrorModal } from '@/components/common/ErrorModal';
+import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import { getFestivalDetail, getFestivalDojangTourStatus } from '@/apis/festival';
 import { startStampTour, stopStampTour } from '@/apis/stamp';
 import DefaultFestivalImage from '@/assets/images/festival/common/card-dim-3.png';
 import { AlertModal } from '@/components/common/AlertModal';
 import { DojangTourButton } from '@/components/common/DojangTourButton';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { FestivalCategoryBadge } from '@/components/common/FestivalCategoryBadge';
 import { FestivalStatusBadge } from '@/components/common/FestivalStatusBadge';
 import DescriptionBlock from '@/components/festival/detail/DescriptionBlock';
@@ -13,6 +14,7 @@ import { LocationIcon } from '@/components/icons/LocationIcon';
 import { PhoneIcon } from '@/components/icons/PhoneIcon';
 import { WebIcon } from '@/components/icons/WebIcon';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
+import { useCurrentLocation } from '@/hooks/use-current-location';
 import { DojangTourButtonStatus, FestivalDetail } from '@/types/festival';
 import { mapDojangTourStatus } from '@/utils/dojangStatus';
 import { useRouter } from 'expo-router';
@@ -27,13 +29,21 @@ type Props = {
 export default function FestivalDetailPage({
     festivalId,
 }: Props) {
-  const [pageLoading, setPageLoading] = useState(true);
-  const [pageError, setPageError] = useState(false);
-  const [reload, setReload] = useState(0);
     const insets = useSafeAreaInsets();
     const router = useRouter();
+    const [pageLoading, setPageLoading] = useState(true);
     const [failedImageUri, setFailedImageUri] = useState<string | undefined>();
     const [isStopModalVisible, setIsStopModalVisible] = useState(false);
+    const {
+        requestLocation,
+    } = useCurrentLocation();
+
+    const [failedRequest, setFailedRequest] = useState<{
+        retry: () => void;
+        isOffline: boolean;
+    } | null>(null);
+    const [reloadTrigger, setReloadTrigger] = useState(0);
+    const [infoError, setInfoError] = useState<string | null>(null);
 
     const formatMultilineText = (value?: string) => {
         if (!value) return '-';
@@ -52,27 +62,63 @@ export default function FestivalDetailPage({
     const [dojangStatus, setDojangStatus] =
         useState<DojangTourButtonStatus | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      setPageLoading(true);
-      setPageError(false);
-      await getFestivalDetail(festivalId).then((data) => {
-      if (active) setFestival(data);
-    }).catch(() => { if (active) setPageError(true); })
-      .finally(() => { if (active) setPageLoading(false); });
+    const retryFailedRequest = () => {
+        const request = failedRequest;
+        setFailedRequest(null);
+        request?.retry();
     };
-    void load();
-    return () => { active = false; };
-  }, [festivalId, reload]);
 
     useEffect(() => {
+        let isMounted = true;
+
+        const fetchFestivalDetail = async () => {
+            try {
+                setPageLoading(true);
+                setFailedRequest(null);
+                setInfoError(null);
+                const data = await getFestivalDetail(festivalId);
+
+                if (isMounted) setFestival(data);
+            } catch (error) {
+                console.error('축제 상세 조회 실패:', error);
+
+                if (!isMounted) {
+                    return;
+                }
+
+                if (isRetryableError(error)) {
+                    setFailedRequest({
+                        retry: () => setReloadTrigger((prev) => prev + 1),
+                        isOffline: error instanceof NetworkOfflineError,
+                    });
+                } else {
+                    setInfoError(
+                        error instanceof ApiError
+                            ? error.message
+                            : '정보를 불러오지 못했어요.',
+                    );
+                }
+            } finally {
+                if (isMounted) setPageLoading(false);
+            }
+        };
+
+        fetchFestivalDetail();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [festivalId, reloadTrigger]);
+
+    useEffect(() => {
+        let isMounted = true;
+
         const fetchDojangStatus = async () => {
             try {
                 const data =
                     await getFestivalDojangTourStatus(festivalId);
 
-                setDojangStatus(
+                if (isMounted) setDojangStatus(
                     mapDojangTourStatus(data.status)
                 );
             } catch (error) {
@@ -80,51 +126,157 @@ export default function FestivalDetailPage({
                     '도장투어 상태 조회 실패:',
                     error
                 );
+
+                if (!isMounted) {
+                    return;
+                }
+
+                if (isRetryableError(error)) {
+                    setFailedRequest({
+                        retry: () => setReloadTrigger((prev) => prev + 1),
+                        isOffline: error instanceof NetworkOfflineError,
+                    });
+                } else {
+                    setInfoError(
+                        error instanceof ApiError
+                            ? error.message
+                            : '정보를 불러오지 못했어요.',
+                    );
+                }
             }
         };
 
         fetchDojangStatus();
-    }, [festivalId]);
 
-  if (pageLoading || !festival || pageError) {
-    return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.gray.gray00 }}>
-      {pageLoading && <PageLoadingIndicator />}
-      <ErrorModal visible={pageError} onCancel={() => router.back()}
-        onRetry={() => setReload((value) => value + 1)} />
-    </View>;
-  }
+        return () => {
+            isMounted = false;
+        };
+    }, [festivalId, reloadTrigger]);
+
+    if (pageLoading || !festival) {
+        return (
+            <View style={styles.container}>
+                {pageLoading && (
+                    <View style={styles.loadingContainer}>
+                        <PageLoadingIndicator />
+                    </View>
+                )}
+
+                <ErrorModal
+                    visible={failedRequest !== null}
+                    title={
+                        failedRequest?.isOffline
+                            ? '오프라인 상태예요'
+                            : undefined
+                    }
+                    description={
+                        failedRequest?.isOffline
+                            ? '인터넷 연결을 확인한 후 다시 시도해 주세요.'
+                            : undefined
+                    }
+                    onCancel={() => { setFailedRequest(null); router.back(); }}
+                    onRetry={retryFailedRequest}
+                />
+
+                <AlertModal
+                    visible={infoError !== null}
+                    title="오류"
+                    description={infoError ?? ''}
+                    confirmText="확인"
+                    onClose={() => { setInfoError(null); router.back(); }}
+                    onConfirm={() => { setInfoError(null); router.back(); }}
+                />
+            </View>
+        );
+    }
 
     const imageSource =
         festival.imageUrl && failedImageUri !== festival?.imageUrl
             ? { uri: festival.imageUrl }
             : DefaultFestivalImage;
 
-    const homeLink = festival.homepageUrl;
+    const homeLink = festival.homepageUrl
+        ? festival.homepageUrl.startsWith('http://') ||
+            festival.homepageUrl.startsWith('https://')
+            ? festival.homepageUrl
+            : `https://${festival.homepageUrl}`
+        : null;
+
+    const handleOpenHomepage = async () => {
+        if (!homeLink) {
+            return;
+        }
+
+        try {
+            await Linking.openURL(homeLink);
+        } catch (error) {
+            console.error('홈페이지 열기 실패:', error);
+        }
+    };
+
+    const refreshDojangStatus = async () => {
+        try {
+            const data =
+                await getFestivalDojangTourStatus(festivalId);
+
+            setDojangStatus(
+                mapDojangTourStatus(data.status),
+            );
+        } catch (error) {
+            console.error(
+                '도장투어 상태 재조회 실패:',
+                error
+            );
+        }
+    };
+
+    const handleStartTour = async () => {
+        try {
+            await startStampTour(festivalId);
+        } catch (error) {
+            console.error(
+                '스탬프 투어 시작 실패:',
+                error
+            );
+
+            if (isRetryableError(error)) {
+                setFailedRequest({
+                    retry: handleStartTour,
+                    isOffline:
+                        error instanceof NetworkOfflineError,
+                });
+            } else {
+                setInfoError(
+                    error instanceof ApiError
+                        ? error.message
+                        : '스탬프 투어를 시작하지 못했어요.',
+                );
+            }
+
+            return;
+        }
+
+        // 투어 시작은 이미 서버에 반영됐으므로, 이후 상태 재조회가 실패하더라도 이동은
+        // 그대로 진행한다. GET /api/v1/stamp-tour가 festivalId 없이도 현재 진행 중인
+        // 투어를 내려주므로 파라미터 없이 이동해도 Tour 탭이 알아서 다시 조회한다.
+        router.push('/(tabs)/tour');
+
+        await refreshDojangStatus();
+    };
 
     const handleDojangButtonPress = async () => {
         if (dojangStatus === 'start') {
+            // 거부하거나 실패해도 투어 시작 가능
             try {
-                await startStampTour(festivalId);
+                await requestLocation();
             } catch (error) {
-                console.error('스탬프 투어 시작 실패:', error);
-                return;
-            }
-
-            // 투어 시작은 이미 서버에 반영됐으므로, 이후 상태 재조회가 실패하더라도 이동은
-            // 그대로 진행한다. GET /api/v1/stamp-tour가 festivalId 없이도 현재 진행 중인
-            // 투어를 내려주므로 파라미터 없이 이동해도 Tour 탭이 알아서 다시 조회한다.
-            router.push('/(tabs)/tour');
-
-            try {
-                const data = await getFestivalDojangTourStatus(festivalId);
-
-                setDojangStatus(
-                    mapDojangTourStatus(data.status),
+                console.warn(
+                    '위치 권한 요청 실패:',
+                    error
                 );
-            } catch (error) {
-                console.error('도장투어 상태 재조회 실패:', error);
             }
 
+            await handleStartTour();
             return;
         }
 
@@ -136,18 +288,34 @@ export default function FestivalDetailPage({
     const handleStopTour = async () => {
         try {
             await stopStampTour(festivalId);
-
-            const data =
-                await getFestivalDojangTourStatus(festivalId);
-
-            setDojangStatus(
-                mapDojangTourStatus(data.status),
+        } catch (error) {
+            console.error(
+                '스탬프 투어 중단 실패:',
+                error
             );
 
             setIsStopModalVisible(false);
-        } catch (error) {
-            console.error('스탬프 투어 중단 실패:', error);
+
+            if (isRetryableError(error)) {
+                setFailedRequest({
+                    retry: handleStopTour,
+                    isOffline:
+                        error instanceof NetworkOfflineError,
+                });
+            } else {
+                setInfoError(
+                    error instanceof ApiError
+                        ? error.message
+                        : '스탬프 투어를 중단하지 못했어요.',
+                );
+            }
+
+            return;
         }
+
+        setIsStopModalVisible(false);
+
+        await refreshDojangStatus();
     };
 
     return (
@@ -160,7 +328,7 @@ export default function FestivalDetailPage({
             >
                 <ImageBackground
                     source={imageSource}
-          onError={() => setFailedImageUri(festival.imageUrl)}
+                    onError={() => setFailedImageUri(festival.imageUrl)}
                     style={styles.imageSection}
                     resizeMode="cover"
                 >
@@ -233,7 +401,7 @@ export default function FestivalDetailPage({
                                 <WebIcon />
                             </View>
                             {homeLink ? (
-                                <Pressable onPress={() => Linking.openURL(homeLink)}>
+                                <Pressable onPress={handleOpenHomepage}>
                                     <Text style={[
                                         styles.text,
                                         styles.underline
@@ -269,6 +437,12 @@ export default function FestivalDetailPage({
                     <Text style={styles.title}>이용 안내</Text>
                     <View style={styles.usageBox}>
                         <View style={styles.usageLine}>
+                            <Text style={styles.textLeft}>축제기간</Text>
+                            <Text style={styles.textRight}>
+                                {festival.eventPeriod || '-'}
+                            </Text>
+                        </View>
+                        <View style={styles.usageLine}>
                             <Text style={styles.textLeft}>이용시간</Text>
                             <Text style={styles.textRight}>
                                 {formatMultilineText(festival.operationHours) || '-'}
@@ -284,12 +458,6 @@ export default function FestivalDetailPage({
                             <Text style={styles.textLeft}>이용료</Text>
                             <Text style={styles.textRight}>
                                 {formatMultilineText(festival.useFee) || '-'}
-                            </Text>
-                        </View>
-                        <View style={styles.usageLine}>
-                            <Text style={styles.textLeft}>주차시설</Text>
-                            <Text style={styles.textRight}>
-                                {formatMultilineText(festival.parkingFee) || '-'}
                             </Text>
                         </View>
                     </View>
@@ -323,11 +491,35 @@ export default function FestivalDetailPage({
                 onClose={() => setIsStopModalVisible(false)}
                 onConfirm={handleStopTour}
             />
+            <ErrorModal
+                visible={failedRequest !== null}
+                title={failedRequest?.isOffline ? '오프라인 상태예요' : undefined}
+                description={
+                    failedRequest?.isOffline
+                        ? '인터넷 연결을 확인한 후 다시 시도해 주세요.'
+                        : undefined
+                }
+                onCancel={() => setFailedRequest(null)}
+                onRetry={retryFailedRequest}
+            />
+            <AlertModal
+                visible={infoError !== null}
+                title="오류"
+                description={infoError ?? ''}
+                confirmText="확인"
+                onClose={() => setInfoError(null)}
+                onConfirm={() => setInfoError(null)}
+            />
         </View>
     )
 }
 
 const styles = StyleSheet.create({
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     container: {
         flex: 1,
         backgroundColor: Colors.gray.gray00,
@@ -426,7 +618,7 @@ const styles = StyleSheet.create({
         color: Colors.gray.gray70,
     },
     textRight: {
-        maxWidth: 180,
+        maxWidth: 210,
         textAlign: 'right',
         fontFamily: FontFamily.semiBold,
         fontSize: FontSize.md,
