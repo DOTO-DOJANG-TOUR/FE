@@ -2,7 +2,7 @@ import { getTourSpotDetail } from '@/apis/tour';
 import { distanceMeters } from '@/utils/geo';
 import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
 import type { LocationProblem } from '@/utils/locationPolicy';
-import { ApiError, getServerNowMs } from '@/apis/client';
+import { getServerNowMs } from '@/apis/client';
 import { createTourSpotStamp, stopTourSpotVisit } from '@/apis/tourVisit';
 import { AlertModal } from '@/components/common/AlertModal';
 import { DojangTourButton } from '@/components/common/DojangTourButton';
@@ -224,16 +224,9 @@ export default function TourCheckInPage() {
         return;
       }
 
-      await createTourSpotStamp(festivalId, tourSpotId, {
-        mapX: result.coords.lng,
-        mapY: result.coords.lat,
-      });
+      await createTourSpotStamp(festivalId, tourSpotId);
       setCompleted(true);
-    } catch (error) {
-      if (error instanceof ApiError && error.code === 'STAMP-400-001') {
-        setTooFarVisible(true);
-        return;
-      }
+    } catch {
       setRetryVisible(true);
     } finally {
       // 위치 권한 요청 자체가 예외를 던져도 버튼이 영구 비활성화되지 않게 한다.
