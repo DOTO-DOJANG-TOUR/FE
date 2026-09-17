@@ -322,6 +322,9 @@ export default function TourMainPage() {
               setExpanded(true);
             }}
             onAttractionPress={handleAttractionPress}
+            onStampBadgePress={() => router.push({
+              pathname: '/stamp-detail/[id]', params: { id: stampTour.festivalId },
+            })}
           />
 
           {/* 지도 SDK가 뜰 때까지 바텀시트·검색바까지 같이 가려서 컴포넌트 단위가 아닌

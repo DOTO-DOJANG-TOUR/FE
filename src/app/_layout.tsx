@@ -105,9 +105,11 @@ export default function RootLayout() {
           <Stack.Protected
             guard={status === 'authenticated' && tourVisitStatus !== 'active'}
           >
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="festival-detail" />
-            <Stack.Screen name="festival-search" />
+            {/* 축제 상세에서 도장 투어를 시작하고 투어 탭으로 넘어갈 때(기본 전환) 새 화면이
+                배경색으로 칠해지기 전 잠깐 흰 화면이 보이던 문제 — visit 화면과 같은 방식으로
+                완화한다. */}
+            <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+            <Stack.Screen name="festival-detail/[id]" />
             <Stack.Screen name="search" />
             <Stack.Screen name="visit" options={{ animation: 'fade' }} />
             <Stack.Screen name="stamp-detail/[id]" />
