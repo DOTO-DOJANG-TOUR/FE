@@ -7,11 +7,12 @@ import FestivalMainTitle from "@/components/festival/main/FestivalMainTitle";
 import { EmptyIcon } from "@/components/icons/EmptyIcon";
 import { InfoIcon } from "@/components/icons/InfoIcon";
 import StampItemCard from "@/components/stamp/StampItemCard";
+import StampQrModal from "@/components/stamp/StampQrModal";
 import { Colors, FontFamily, FontSize, Spacing } from "@/constants/theme";
 import { TourStampListResult } from "@/types/stamp";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function StampPage() {
@@ -19,6 +20,7 @@ export default function StampPage() {
     const insets = useSafeAreaInsets();
     const [myStamps, setMyStamps] = useState<TourStampListResult | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [rewardModalVisible, setRewardModalVisible] = useState(false);
 
     const [failedRequest, setFailedRequest] = useState<{
         retry: () => void;
@@ -86,8 +88,7 @@ export default function StampPage() {
             return () => {
                 isMounted = false;
             };
-        // 재시도 시 포커스 조회를 다시 실행한다.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+
         }, [reloadTrigger])
     );
 
@@ -137,8 +138,13 @@ export default function StampPage() {
                 title={`${myStamps?.rewardedTourCount ?? 0}개의 보상을 받았어요`}
             />
             <View style={styles.rewardInfoBox}>
-                <InfoIcon />
-                <Text style={styles.rewardInfoText}>보상 수령 방법</Text>
+                <Pressable
+                    style={styles.rewardInfoButton}
+                    onPress={() => setRewardModalVisible(true)}
+                >
+                    <InfoIcon />
+                    <Text style={styles.rewardInfoText}>보상 수령 방법</Text>
+                </Pressable>
             </View>
             {myStamps?.tours.length ? (
                 <FlatList
@@ -174,6 +180,11 @@ export default function StampPage() {
                     </View>
                 </View>
             )}
+
+            <StampQrModal
+                visible={rewardModalVisible}
+                onClose={() => setRewardModalVisible(false)}
+            />
 
             <ErrorModal
                 visible={failedRequest !== null}
@@ -216,10 +227,12 @@ const styles = StyleSheet.create({
     },
     rewardInfoBox: {
         backgroundColor: '#FAFAFA',
-        flexDirection: 'row',
         paddingHorizontal: 20,
         paddingVertical: 8.5,
         marginVertical: 10,
+    },
+    rewardInfoButton: {
+        flexDirection: 'row',
         alignItems: 'center',
         gap: 2,
     },

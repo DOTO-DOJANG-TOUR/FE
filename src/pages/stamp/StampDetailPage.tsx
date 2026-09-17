@@ -1,10 +1,10 @@
-import { PageLoadingIndicator } from '@/components/common/PageLoadingIndicator';
 import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import { getMyStampsDetail, getRewardQr } from '@/apis/stamp';
 import DefaultFestivalImage from '@/assets/images/festival/common/card-dim-3.png';
 import { AlertModal } from '@/components/common/AlertModal';
 import { DojangTourButton } from '@/components/common/DojangTourButton';
 import { ErrorModal } from '@/components/common/ErrorModal';
+import { PageLoadingIndicator } from '@/components/common/PageLoadingIndicator';
 import FestivalMainTitle from '@/components/festival/main/FestivalMainTitle';
 import { BackIcon } from '@/components/icons/BackIcon';
 import { StampDashLineIcon } from '@/components/icons/StampDashLineIcon';
@@ -106,6 +106,20 @@ export default function FestivalDetailPage({
     };
   }, [festivalId, reloadTrigger]);
 
+  useEffect(() => {
+    if (!rewardModalVisible) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      refreshStampDetail();
+    }, 3000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [rewardModalVisible, festivalId]);
+
   if (pageLoading || !stampDetail) {
     return (
       <View style={styles.container}>
@@ -145,7 +159,6 @@ export default function FestivalDetailPage({
 
   const dojangStatus = mapStampDetailDojangStatus(
     stampDetail.status,
-    stampDetail.stampCount,
   );
 
   const imageSource =
@@ -183,11 +196,30 @@ export default function FestivalDetailPage({
     }
   };
 
-  // 보상 받기용 임시 데이터
-  // const TEST_REWARD = true;
-  // const buttonStatus = TEST_REWARD
-  // ? 'getReward'
-  // : dojangStatus;
+  const refreshStampDetail = async () => {
+    try {
+      const data =
+        await getMyStampsDetail(festivalId);
+
+      setStampDetail(data);
+
+      if (data.status === 'REWARDED') {
+        setRewardModalVisible(false);
+
+        router.replace({
+          pathname: '/reward-complete',
+          params: {
+            festivalId,
+          },
+        });
+      }
+    } catch (error) {
+      console.error(
+        '보상 상태 확인 실패:',
+        error
+      );
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -417,6 +449,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   titleBox: {
+    width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -424,15 +457,18 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#DEDEDE',
-    gap: 50,
+    gap: 30,
   },
   title: {
+    flex: 1,
+    minWidth: 0,
     fontFamily: FontFamily.medium,
     fontSize: FontSize.md,
     color: Colors.gray.gray100,
     lineHeight: FontSize.md * 1.5,
   },
   badge: {
+    flexShrink: 0,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,

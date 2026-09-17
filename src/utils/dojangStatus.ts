@@ -24,13 +24,10 @@ export const mapDojangTourStatus = (
 
 export const mapStampDetailDojangStatus = (
   status: DojangTourStatus,
-  stampCount: number,
 ): DojangTourButtonStatus => {
   switch (status) {
     case 'PROGRESS':
-      return stampCount >= 3
-        ? 'getReward'
-        : 'stillProgress';
+      return 'stillProgress';
 
     case 'NOT_STARTED':
       return 'start';
@@ -39,7 +36,7 @@ export const mapStampDetailDojangStatus = (
         return 'alreadyRewarded';
         
     case 'COMPLETED':
-      return 'alreadyJoinedTour';
+      return 'getReward';
 
     case 'PARTICIPATING_IN_ANOTHER_TOUR':
       return 'inOtherTour';

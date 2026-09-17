@@ -1,3 +1,4 @@
+import DefaultQrImage from '@/assets/images/stamp/default-qr.png';
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
@@ -7,8 +8,8 @@ import { CloseIcon } from '../icons/CloseIcon';
 
 type Props = {
     visible: boolean;
-    qrImage: string;
-    rewardCode: string;
+    qrImage?: string;
+    rewardCode?: string;
     onClose: () => void;
 };
 
@@ -21,6 +22,7 @@ export default function StampQrModal({
     const insets = useSafeAreaInsets();
     const { height } = useWindowDimensions();
     const [mounted, setMounted] = useState(visible);
+    const displayRewardCode = rewardCode || '000000';
 
     const [translateY] = useState(() => new Animated.Value(700));
 
@@ -148,14 +150,18 @@ export default function StampQrModal({
 
                     <View style={styles.qrBox}>
                         <Image
-                            source={{ uri: qrImage }}
+                            source={
+                                qrImage
+                                    ? { uri: qrImage }
+                                    : DefaultQrImage
+                            }
                             style={styles.qrImage}
                             contentFit="contain"
                         />
                     </View>
 
                     <View style={styles.codeBox}>
-                        {rewardCode.split('').map((number, index) => (
+                        {displayRewardCode.split('').map((number, index) => (
                             <View
                                 key={`${number}-${index}`}
                                 style={styles.codeItem}
