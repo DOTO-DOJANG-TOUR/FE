@@ -1,5 +1,5 @@
 import { DotoLogoIcon } from '@/components/icons';
-import { FontFamily, FontSize, Colors } from '@/constants/theme';
+import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import {
   Platform,
   StyleSheet,
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   tagline: {
     marginTop: 10,
     color: Colors.pink.pink50,
-    fontFamily: FontFamily.regular,
+    fontFamily: FontFamily.medium,
     fontSize: FontSize.sm,
     lineHeight: 21,
   },
