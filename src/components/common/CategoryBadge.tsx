@@ -67,9 +67,11 @@ export const CategoryBadge = ({
 
 const styles = StyleSheet.create({
   badge: {
-    alignSelf: 'flex-start',
+    width: 65,
+    height: 34,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 10,
     paddingVertical: Spacing.two,
     gap: 2,
