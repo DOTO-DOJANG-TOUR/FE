@@ -480,6 +480,7 @@ export default function FestivalDetailPage({
                 {dojangStatus ? (
                     <DojangTourButton
                         status={dojangStatus}
+                        loading={isStartingTour}
                         onPress={handleDojangButtonPress}
                     />
                 ) : (
@@ -488,12 +489,6 @@ export default function FestivalDetailPage({
                     />
                 )}
             </View>
-
-            {isStartingTour && (
-                <View style={[StyleSheet.absoluteFill, styles.loadingContainer, styles.white]}>
-                    <PageLoadingIndicator />
-                </View>
-            )}
 
             <AlertModal
                 visible={isStopModalVisible}
