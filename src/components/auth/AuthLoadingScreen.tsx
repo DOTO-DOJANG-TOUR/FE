@@ -63,6 +63,6 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   taglineHighlight: {
-    fontFamily: FontFamily.semiBold,
+    fontFamily: FontFamily.bold,
   },
 });
