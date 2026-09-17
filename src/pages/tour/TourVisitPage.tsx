@@ -57,11 +57,14 @@ export default function TourVisitPage() {
   const [retryVisible, setRetryVisible] = useState(false);
   const [duplicateVisitMessage, setDuplicateVisitMessage] = useState<string | null>(null);
   const [detailSheetHeight, setDetailSheetHeight] = useState<number | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapLoadError, setMapLoadError] = useState(false);
 
   const mapRef = useRef<TourMapHandle>(null);
   const lastFocusedLayoutRef = useRef<string | null>(null);
   // 응답이 빨리 오면 스피너를 아예 안 띄워서 화면 전환이 반짝이지 않게 한다.
   const showLoadingIndicator = useDelayedLoading(isLoading);
+  const showMapLoadingIndicator = useDelayedLoading(!mapReady && !mapLoadError);
 
   useEffect(() => {
     detailRef.current = detail;
@@ -281,6 +284,8 @@ export default function TourVisitPage() {
             showLocationButton={false}
             onSearchPress={() => router.push({ pathname: '/search/tour', params: { festivalId } })}
             onMarkerPress={handleMarkerPress}
+            onReady={() => setMapReady(true)}
+            onLoadError={() => setMapLoadError(true)}
           />
           <TourDetailBottomSheet
             attraction={attraction}
@@ -303,6 +308,14 @@ export default function TourVisitPage() {
               return !!result.coords;
             }}
           />
+
+          {/* 캐시된 상세가 있어도 지도 WebView는 새로 준비해야 한다. 준비 중에는 투어 메인과
+              동일하게 지도·상세 시트를 함께 가리고, 실패하면 TourMap의 재시도 UI를 보여준다. */}
+          {!mapReady && !mapLoadError && (
+            <View style={[StyleSheet.absoluteFill, styles.loadingContainer, styles.pageLoadingOverlay]}>
+              {showMapLoadingIndicator && <LoadingIndicator />}
+            </View>
+          )}
         </>
       )}
 
@@ -354,6 +367,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pageLoadingOverlay: {
+    backgroundColor: Colors.gray.gray20,
   },
   notFoundContainer: {
     flex: 1,
