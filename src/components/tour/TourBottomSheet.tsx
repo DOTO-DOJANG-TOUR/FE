@@ -28,6 +28,7 @@ type Props = {
   onExpandedChange: (expanded: boolean) => void;
   onCategoryChange: (category: TourFilterCategory) => void;
   onAttractionPress: (attraction: TourAttraction) => void;
+  onStampBadgePress?: () => void;
 };
 
 const COLLAPSED_HEIGHT = 164;
@@ -49,6 +50,7 @@ export function TourBottomSheet({
   onExpandedChange,
   onCategoryChange,
   onAttractionPress,
+  onStampBadgePress,
   sharedHeight,
 }: Props) {
   const { height: screenHeight } = useWindowDimensions();
@@ -83,10 +85,15 @@ export function TourBottomSheet({
             onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
           >
             <View style={styles.titleGroup}>
-              <View style={styles.stampBadge}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="도장 상세로 이동"
+                style={({ pressed }) => [styles.stampBadge, pressed && styles.stampBadgePressed]}
+                onPress={onStampBadgePress}
+              >
                 <TourStampIcon />
                 <Text style={styles.stampText}>{stampCount === null ? '—' : stampCount}/{REQUIRED_STAMP_COUNT}</Text>
-              </View>
+              </Pressable>
               <Text numberOfLines={2} style={styles.title}>
                 {title}
               </Text>
@@ -187,6 +194,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: Radius.sm,
     backgroundColor: Colors.pink.pink10,
+  },
+  stampBadgePressed: {
+    backgroundColor: Colors.pink.pink20,
   },
   stampText: {
     color: Colors.pink.pink50,
