@@ -39,6 +39,7 @@ export default function TourMainPage() {
     isOffline: boolean;
   } | null>(null);
   const [locationProblem, setLocationProblem] = useState<LocationProblem | null>(null);
+  const [isLocationButtonLoading, setIsLocationButtonLoading] = useState(false);
   const sheetHeight = useSharedValue<number>(TOUR_SHEET_HEIGHT.collapsed);
   const [stampCountFresh, setStampCountFresh] = useState(false);
   const locationRequestRef = useRef(false);
@@ -61,7 +62,6 @@ export default function TourMainPage() {
   const mapRef = useRef<TourMapHandle>(null);
   const {
     coords: userLocation,
-    isLoading: isLocationLoading,
     requestLocation,
     checkLocation,
   } = useCurrentLocation();
@@ -253,12 +253,16 @@ export default function TourMainPage() {
   const handleLocationPress = async () => {
     if (locationRequestRef.current) return;
     locationRequestRef.current = true;
+    setIsLocationButtonLoading(true);
     setLocationProblem(null);
     try {
       const result = await requestLocation();
       if (result.coords) mapRef.current?.focusOnCurrentLocation(result.coords.lat, result.coords.lng);
       else setLocationProblem(result.problem);
-    } finally { locationRequestRef.current = false; }
+    } finally {
+      locationRequestRef.current = false;
+      setIsLocationButtonLoading(false);
+    }
   };
 
   if (empty === '1' || (!isLoading && !stampTour && !failedRequest)) {
@@ -291,7 +295,7 @@ export default function TourMainPage() {
             onMarkerPress={handleMarkerPress}
             onReady={() => setMapReady(true)}
             onLoadError={() => setMapLoadError(true)}
-            isLocationLoading={isLocationLoading}
+            isLocationLoading={isLocationButtonLoading}
           />
 
           <TourBottomSheet
