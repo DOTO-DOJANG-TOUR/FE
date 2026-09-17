@@ -45,7 +45,7 @@ type FocusOnMarkerOptions = {
 export type TourMapHandle = {
   focusOnBounds: (points: { lat: number; lng: number }[]) => void;
   focusOnMarker: (lat: number, lng: number, options?: FocusOnMarkerOptions) => void;
-  focusOnCurrentLocation: (lat: number, lng: number, level?: number) => void;
+  focusOnCurrentLocation: (lat: number, lng: number, level?: number, bottomInset?: number) => void;
 };
 
 type Props = {
@@ -97,9 +97,15 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const locationButtonAnimatedStyle = useAnimatedStyle(() => ({
-    bottom: locationBottomSharedValue
-      ? locationBottomSharedValue.value + locationBottomOffset
-      : locationBottom,
+    bottom:
+      (locationBottomSharedValue ? locationBottomSharedValue.value : locationBottom) +
+      locationBottomOffset,
+  }));
+
+  // 지도 로드 실패 안내도 내 위치 버튼과 같은 기준(바텀시트에 가려지지 않는 영역)으로
+  // 세로 중앙을 잡는다 — 시트가 펼쳐진 화면(관광지 상세)에서도 시트 아래 묻히지 않게.
+  const errorOverlayAnimatedStyle = useAnimatedStyle(() => ({
+    paddingBottom: locationBottomSharedValue ? locationBottomSharedValue.value : locationBottom,
   }));
 
   const html = useMemo(() => getKakaoMapHtml(KAKAO_JAVASCRIPT_KEY ?? ''), []);
@@ -145,9 +151,10 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
         `window.__dotoMap.setCenter(${lat}, ${lng}, ${level}, ${animate}, ${bottomInset}, ${markerOffsetY});`,
       );
     },
-    focusOnCurrentLocation: (lat, lng, level) => {
+    focusOnCurrentLocation: (lat, lng, level, bottomInset) => {
       const levelArg = typeof level === 'number' ? level : 'undefined';
-      runInWebView(`window.__dotoMap.setCenter(${lat}, ${lng}, ${levelArg});`);
+      const insetArg = Math.max(0, bottomInset ?? 0);
+      runInWebView(`window.__dotoMap.setCenter(${lat}, ${lng}, ${levelArg}, true, ${insetArg});`);
     },
   }));
 
@@ -253,12 +260,14 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
       />
 
       {loadError && (
-        <View style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
-          <Text style={styles.errorText}>지도를 불러오지 못했어요</Text>
+        <Animated.View
+          style={[StyleSheet.absoluteFill, styles.loadingOverlay, errorOverlayAnimatedStyle]}
+        >
+          <Text style={styles.errorText}>지도를 불러오지 못했어요.</Text>
           <Pressable accessibilityRole="button" style={styles.retryButton} onPress={handleRetry}>
             <Text style={styles.retryButtonText}>다시 시도</Text>
           </Pressable>
-        </View>
+        </Animated.View>
       )}
 
       <View style={[styles.searchRow, { top: insets.top + 20 }]}>
@@ -295,24 +304,26 @@ const styles = StyleSheet.create({
   loadingOverlay: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 8,
     backgroundColor: Colors.gray.gray20,
   },
   errorText: {
-    color: Colors.gray.gray70,
+    color: Colors.gray.gray60,
     fontSize: FontSize.sm,
     fontFamily: FontFamily.medium,
   },
   retryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.pink.pink50,
+    paddingHorizontal: 12,
+    // Figma 배지 스타일(badge/status)에 맞춘 값 — Radius 토큰엔 6px이 없어 하드코딩.
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: Colors.pink.pink20,
   },
   retryButtonText: {
-    color: Colors.gray.gray00,
-    fontSize: FontSize.sm,
-    fontFamily: FontFamily.medium,
+    color: Colors.pink.pink50,
+    // Figma body-13-sb — FontSize 토큰엔 13px이 없어 하드코딩.
+    fontSize: 13,
+    fontFamily: FontFamily.semiBold,
   },
   searchRow: {
     position: 'absolute',

@@ -78,7 +78,7 @@ export default function TourCheckInPage() {
 
   const handleCompletedClose = () => {
     completeVisit();
-    router.replace('/(tabs)/tour');
+    router.replace('/(tabs)/stamp');
   };
 
   const handleStampStatus = () => {
@@ -90,7 +90,7 @@ export default function TourCheckInPage() {
   // 방문 시작 직후 이 화면은 라우팅 가드가 스택에서 이전 화면(visit)을 빼버리므로, 기본
   // 뒤로가기(pop)를 그대로 두면 이미 낡은 화면으로 튕겨 서버 상태와 어긋난다(방문 세션이
   // 여전히 진행 중이라 "요청이 현재 상태와 충돌합니다" 에러로 이어짐). 그래서 하드웨어
-  // 뒤로가기를 직접 처리한다: 완료 상태면 투어 탭으로, 아니면(진행 중) 바로 앱을 종료한다.
+  // 뒤로가기를 직접 처리한다: 완료 상태면 도장 탭으로, 아니면(진행 중) 바로 앱을 종료한다.
   useFocusEffect(
     useCallback(() => {
       const subscription = BackHandler.addEventListener('hardwareBackPress', () => {

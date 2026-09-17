@@ -3,9 +3,14 @@ import { Animated, PanResponder, type PanResponderGestureState } from 'react-nat
 import { Gesture } from 'react-native-gesture-handler';
 
 // 프로토타입에 시간/속도 수치가 노출되지 않아 기존 spring을 유지한다.
-export function useTourSheet({ expanded, collapsedHeight, expandedHeight, onExpandedChange }: {
+export function useTourSheet({
+  expanded, collapsedHeight, expandedHeight, onExpandedChange, onHeightChange,
+}: {
   expanded: boolean; collapsedHeight: number; expandedHeight: number;
   onExpandedChange: (expanded: boolean) => void;
+  // 드래그·스프링 애니메이션 중에도 매 프레임 현재 시트 높이를 그대로 흘려보낸다
+  // (예: 내 위치 버튼이 시트를 따라 움직이도록).
+  onHeightChange?: (value: number) => void;
 }) {
   const [height] = useState(() => new Animated.Value(expanded ? expandedHeight : collapsedHeight));
   const currentHeight = useRef(expanded ? expandedHeight : collapsedHeight);
@@ -13,6 +18,10 @@ export function useTourSheet({ expanded, collapsedHeight, expandedHeight, onExpa
   const scrollOffset = useRef(0);
   const dragging = useRef(false);
   const bodyCanDrag = useRef(false);
+  const onHeightChangeRef = useRef(onHeightChange);
+  useEffect(() => {
+    onHeightChangeRef.current = onHeightChange;
+  }, [onHeightChange]);
 
   const springTo = useCallback((targetExpanded: boolean) => {
     Animated.spring(height, {
@@ -28,7 +37,10 @@ export function useTourSheet({ expanded, collapsedHeight, expandedHeight, onExpa
   }, [expanded, onExpandedChange, springTo]);
 
   useEffect(() => {
-    const id = height.addListener(({ value }) => { currentHeight.current = value; });
+    const id = height.addListener(({ value }) => {
+      currentHeight.current = value;
+      onHeightChangeRef.current?.(value);
+    });
     return () => height.removeListener(id);
   }, [height]);
 

@@ -16,6 +16,7 @@ type Props = {
   onClose: () => void; onExpandedChange: (expanded: boolean) => void;
   onVisited: () => void; onRequestVisit: () => Promise<boolean>;
   onHeightChange?: (height: number) => void;
+  onLiveHeightChange?: (height: number) => void;
 };
 
 function normalizeHomepageUrl(value?: string) {
@@ -25,7 +26,7 @@ function normalizeHomepageUrl(value?: string) {
 }
 
 export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, onExpandedChange,
-  onVisited, onRequestVisit, onHeightChange }: Props) {
+  onVisited, onRequestVisit, onHeightChange, onLiveHeightChange }: Props) {
   const { height: screenHeight, width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [bodyHeight, setBodyHeight] = useState<number | null>(null);
@@ -42,12 +43,11 @@ export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, 
     collapsedHeight + measuredBodyHeight + 20, screenHeight - insets.top - 120,
   ));
   const { height, headerPanHandlers, bodyGesture, nativeScrollGesture, onScroll } = useTourSheet({
-    expanded, collapsedHeight, expandedHeight, onExpandedChange,
+    expanded, collapsedHeight, expandedHeight, onExpandedChange, onHeightChange: onLiveHeightChange,
   });
   const photos = attraction.imageUrls.filter((uri) => uri?.trim());
   const photoSlots = Array.from({ length: 4 }, (_, index) => photos[index] ?? '');
   const address = attraction.address.trim() || '-';
-  const phone = attraction.phone?.trim() || '';
   const homepageUrl = normalizeHomepageUrl(attraction.homepage);
 
   useEffect(() => {
@@ -85,8 +85,6 @@ export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, 
           </ScrollView>
           <View style={styles.infoGroup}>
             <InfoRow icon="space" text={address} />
-            <InfoRow icon="call" text={phone || '-'}
-              onPress={phone ? () => openLink(`tel:${phone}`) : undefined} />
             <InfoRow icon="page" text={homepageUrl ? '홈페이지 바로가기' : '-'}
               isLink={!!homepageUrl}
               onPress={homepageUrl ? () => openLink(homepageUrl) : undefined} />
@@ -113,7 +111,7 @@ export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, 
 }
 
 function InfoRow({ icon, text, isLink, onPress }: {
-  icon: 'space' | 'call' | 'page'; text: string; isLink?: boolean; onPress?: () => void;
+  icon: 'space' | 'page'; text: string; isLink?: boolean; onPress?: () => void;
 }) {
   const row = <View style={styles.infoRow}><TourAsset name={icon} />
     <Text style={[styles.infoText, isLink && styles.linkText]}>{text}</Text></View>;

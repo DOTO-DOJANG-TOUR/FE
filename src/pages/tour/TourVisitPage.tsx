@@ -4,6 +4,7 @@ import { startTourSpotVisit } from '@/apis/tourVisit';
 import { LoadingIndicator } from '@/components/common/LoadingIndicator';
 import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
 import { useCurrentLocation } from '@/hooks/use-current-location';
+import { useLiveLocationWatch } from '@/hooks/use-live-location-watch';
 import type { LocationProblem } from '@/utils/locationPolicy';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { TourDetailBottomSheet } from '@/components/tour/TourDetailBottomSheet';
@@ -35,7 +36,12 @@ export default function TourVisitPage() {
   }>();
 
   const { coords: userLocation, checkLocation, requestLocation } = useCurrentLocation();
+  const { coords: liveLocation, refresh: refreshLiveLocation } = useLiveLocationWatch();
   const [locationProblem, setLocationProblem] = useState<LocationProblem | null>(null);
+  const [mapLocationProblem, setMapLocationProblem] = useState<LocationProblem | null>(null);
+  const [isLocationButtonLoading, setIsLocationButtonLoading] = useState(false);
+  const [sheetLiveHeight, setSheetLiveHeight] = useState(0);
+  const locationRequestRef = useRef(false);
   useEffect(() => { void checkLocation(); }, [checkLocation]);
   const [expanded, setExpanded] = useState(true);
   const [visited, setVisited] = useState(visitedParam === '1');
@@ -239,6 +245,32 @@ export default function TourVisitPage() {
     navigateToAttraction(markerId);
   };
 
+  const handleLocationPress = async () => {
+    if (locationRequestRef.current) return;
+    locationRequestRef.current = true;
+    setIsLocationButtonLoading(true);
+    setMapLocationProblem(null);
+    try {
+      const result = await requestLocation();
+      if (result.coords) {
+        // 이 화면에 처음 들어와 권한이 없던 상태였다면 실시간 구독이 아직 시작 못 했을 수
+        // 있다 — 방금 허용됐으니 다시 시작한다.
+        refreshLiveLocation();
+        // 관광지 상세는 마커를 선택할 때와 마찬가지로 바텀시트에 가려지지 않는 영역
+        // 기준으로 중앙 정렬한다(투어 메인은 바텀시트를 뺀 정렬을 안 쓰므로 그대로 둔다).
+        mapRef.current?.focusOnCurrentLocation(
+          result.coords.lat, result.coords.lng, undefined,
+          expanded ? detailSheetHeight ?? 0 : 0,
+        );
+      } else {
+        setMapLocationProblem(result.problem);
+      }
+    } finally {
+      locationRequestRef.current = false;
+      setIsLocationButtonLoading(false);
+    }
+  };
+
   const handleVisit = async () => {
     if (!attraction || !festivalId) return;
 
@@ -280,18 +312,22 @@ export default function TourVisitPage() {
             ref={mapRef}
             markers={markers}
             selectedMarkerId={attractionId}
-            currentLocation={userLocation}
-            showLocationButton={false}
+            currentLocation={liveLocation ?? userLocation}
+            locationBottom={sheetLiveHeight}
+            locationBottomOffset={20}
             onSearchPress={() => router.push({ pathname: '/search/tour', params: { festivalId } })}
+            onLocationPress={handleLocationPress}
             onMarkerPress={handleMarkerPress}
             onReady={() => setMapReady(true)}
             onLoadError={() => setMapLoadError(true)}
+            isLocationLoading={isLocationButtonLoading}
           />
           <TourDetailBottomSheet
             attraction={attraction}
             expanded={expanded}
             visited={visited}
             onHeightChange={setDetailSheetHeight}
+            onLiveHeightChange={setSheetLiveHeight}
             onClose={() => {
               // router.canGoBack()이 true를 반환해도 실제 back()이 처리되지 않아
               // GO_BACK 에러가 나는 경우가 있어(#53), 뒤로가기 대신 투어 메인으로
@@ -353,6 +389,7 @@ export default function TourVisitPage() {
       />
 
       <LocationProblemModal problem={locationProblem} purpose="visit" onClose={() => setLocationProblem(null)} />
+      <LocationProblemModal problem={mapLocationProblem} purpose="map" onClose={() => setMapLocationProblem(null)} />
     </View>
   );
 }
