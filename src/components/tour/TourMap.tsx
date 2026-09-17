@@ -13,6 +13,10 @@ import {
   useState,
 } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  type SharedValue,
+  useAnimatedStyle,
+} from 'react-native-reanimated';
 import WebView, { type WebViewMessageEvent } from 'react-native-webview';
 import { getKakaoMapHtml } from './kakaoMapHtml';
 import { CurrentLocationIcon } from './TourIcons';
@@ -22,6 +26,7 @@ const DEFAULT_MARKER_FOCUS_LEVEL = 3;
 // SDK 스크립트 자체가 네트워크 레벨에서 조용히 실패하면(에러 이벤트도 못 잡는 경우가 있음)
 // ready도 error도 영영 안 와서 로딩 스피너가 무한히 떠 있을 수 있다 — 그걸 막기 위한 타임아웃.
 const MAP_READY_TIMEOUT_MS = 10000;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export type TourMapMarker = {
   id: string;
@@ -30,9 +35,15 @@ export type TourMapMarker = {
   lng: number;
 };
 
+type FocusOnMarkerOptions = {
+  level?: number;
+  animate?: boolean;
+  bottomInset?: number;
+};
+
 export type TourMapHandle = {
   focusOnBounds: (points: { lat: number; lng: number }[]) => void;
-  focusOnMarker: (lat: number, lng: number, level?: number, animate?: boolean) => void;
+  focusOnMarker: (lat: number, lng: number, options?: FocusOnMarkerOptions) => void;
   focusOnCurrentLocation: (lat: number, lng: number, level?: number) => void;
 };
 
@@ -42,6 +53,8 @@ type Props = {
   currentLocation?: { lat: number; lng: number } | null;
   showLocationButton?: boolean;
   locationBottom?: number;
+  locationBottomSharedValue?: SharedValue<number>;
+  locationBottomOffset?: number;
   isLocationLoading?: boolean;
   onSearchPress?: () => void;
   onLocationPress?: () => void;
@@ -61,6 +74,8 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
     currentLocation = null,
     showLocationButton = true,
     locationBottom = 192,
+    locationBottomSharedValue,
+    locationBottomOffset = 0,
     isLocationLoading = false,
     onSearchPress,
     onLocationPress,
@@ -70,6 +85,8 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
   },
   ref,
 ) {
+  'use no memo';
+
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
   const isReadyRef = useRef(false);
@@ -78,6 +95,11 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
   const [isReady, setIsReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const locationButtonAnimatedStyle = useAnimatedStyle(() => ({
+    bottom: locationBottomSharedValue
+      ? locationBottomSharedValue.value + locationBottomOffset
+      : locationBottom,
+  }));
 
   const html = useMemo(() => getKakaoMapHtml(KAKAO_JAVASCRIPT_KEY ?? ''), []);
   const webViewSource = useMemo(() => ({ html, baseUrl: 'http://localhost' }), [html]);
@@ -113,8 +135,13 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
       if (points.length === 0) return;
       runInWebView(`window.__dotoMap.fitBounds(${JSON.stringify(points)});`);
     },
-    focusOnMarker: (lat, lng, level = DEFAULT_MARKER_FOCUS_LEVEL, animate = true) => {
-      runInWebView(`window.__dotoMap.setCenter(${lat}, ${lng}, ${level}, ${animate});`);
+    focusOnMarker: (lat, lng, options = {}) => {
+      const level = options.level ?? DEFAULT_MARKER_FOCUS_LEVEL;
+      const animate = options.animate ?? true;
+      const bottomInset = Math.max(0, options.bottomInset ?? 0);
+      runInWebView(
+        `window.__dotoMap.setCenter(${lat}, ${lng}, ${level}, ${animate}, ${bottomInset});`,
+      );
     },
     focusOnCurrentLocation: (lat, lng, level) => {
       const levelArg = typeof level === 'number' ? level : 'undefined';
@@ -245,10 +272,10 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
       </View>
 
       {showLocationButton && (
-        <Pressable
+        <AnimatedPressable
           accessibilityRole="button"
           accessibilityLabel="내 위치로 이동"
-          style={[styles.locationButton, { bottom: locationBottom }]}
+          style={[styles.locationButton, locationButtonAnimatedStyle]}
           onPress={onLocationPress}
         >
           {isLocationLoading ? (
@@ -256,7 +283,7 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
           ) : (
             <CurrentLocationIcon />
           )}
-        </Pressable>
+        </AnimatedPressable>
       )}
     </View>
   );

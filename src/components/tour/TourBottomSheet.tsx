@@ -3,19 +3,18 @@ import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { REQUIRED_STAMP_COUNT, TourColors, TourTypography } from '@/constants/tourTheme';
 import { useTourMainSheet } from '@/hooks/use-tour-main-sheet';
 import type { TourAttraction, TourFilterCategory } from '@/types/tour';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { TourAsset } from './TourAsset';
 import { GestureDetector } from 'react-native-gesture-handler';
 import {
   FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { type SharedValue } from 'react-native-reanimated';
 import { TourAttractionCard } from './TourAttractionCard';
 import { TourStampIcon } from './TourIcons';
 
@@ -23,7 +22,7 @@ type Props = {
   expanded: boolean;
   title: string;
   stampCount: number | null;
-  onHeightChange?: (height: number) => void;
+  sharedHeight: SharedValue<number>;
   selectedCategory: TourFilterCategory;
   attractions: TourAttraction[];
   onExpandedChange: (expanded: boolean) => void;
@@ -50,7 +49,7 @@ export function TourBottomSheet({
   onExpandedChange,
   onCategoryChange,
   onAttractionPress,
-  onHeightChange,
+  sharedHeight,
 }: Props) {
   const { height: screenHeight } = useWindowDimensions();
   const [headerHeight, setHeaderHeight] = useState(COLLAPSED_HEIGHT - 45);
@@ -63,14 +62,8 @@ export function TourBottomSheet({
     nativeScrollGesture,
     onScroll,
   } = useTourMainSheet({
-    expanded, collapsedHeight, expandedHeight, onExpandedChange,
+    expanded, collapsedHeight, expandedHeight, onExpandedChange, sharedHeight,
   });
-
-  // 애니메이션 중 onLayout 높이를 매 프레임 부모로 올리면 지도 위 버튼까지 계속 재배치된다.
-  // 시트가 향하는 스냅 높이만 알려서 지도와 시트가 서로의 레이아웃을 흔들지 않게 한다.
-  useEffect(() => {
-    onHeightChange?.(expanded ? expandedHeight : collapsedHeight);
-  }, [expanded, collapsedHeight, expandedHeight, onHeightChange]);
 
   return (
     <Animated.View style={[styles.sheet, animatedStyle]}>
@@ -98,21 +91,17 @@ export function TourBottomSheet({
                 {title}
               </Text>
             </View>
-            <ScrollView
-              style={styles.filters}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryRow}
-            >
+            <View style={styles.categoryRow}>
               {categories.map((category) => (
                 <CategoryBadge
                   key={category}
                   category={category}
                   selected={selectedCategory === category}
                   onPress={() => onCategoryChange(category)}
+                  style={styles.categoryBadge}
                 />
               ))}
-            </ScrollView>
+            </View>
           </View>
         </View>
       </GestureDetector>
@@ -185,7 +174,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gray.gray30,
   },
   titleGroup: { gap: 8 },
-  filters: { height: 34, flexGrow: 0 },
   header: {
     gap: 18,
     paddingHorizontal: 20,
@@ -213,7 +201,13 @@ const styles = StyleSheet.create({
     includeFontPadding: false, fontFamily: FontFamily.semiBold,
   },
   categoryRow: {
+    height: 34,
+    flexDirection: 'row',
     gap: 7,
+  },
+  categoryBadge: {
+    width: 'auto',
+    flex: 1,
   },
   listArea: {
     flex: 1,

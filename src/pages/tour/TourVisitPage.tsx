@@ -6,10 +6,7 @@ import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import type { LocationProblem } from '@/utils/locationPolicy';
 import { ErrorModal } from '@/components/common/ErrorModal';
-import {
-  TOUR_DETAIL_SHEET_HEIGHT,
-  TourDetailBottomSheet,
-} from '@/components/tour/TourDetailBottomSheet';
+import { TourDetailBottomSheet } from '@/components/tour/TourDetailBottomSheet';
 import { TourMap, type TourMapHandle, type TourMapMarker } from '@/components/tour/TourMap';
 import { Colors } from '@/constants/theme';
 import { mapTourCategory } from '@/constants/tourCategory';
@@ -20,7 +17,7 @@ import { declutterCoordinates, type GeoPoint } from '@/utils/geo';
 import { getCachedTourSpot, setCachedTourSpot } from '@/utils/tourSpotCache';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 const DUPLICATE_VISIT_ERROR_CODES = new Set([
   'STAMP-TOUR-409-002',
@@ -30,7 +27,6 @@ const DUPLICATE_VISIT_ERROR_CODES = new Set([
 
 export default function TourVisitPage() {
   const router = useRouter();
-  const { height: screenHeight } = useWindowDimensions();
   const { attractionId, festivalId, visited: visitedParam } = useLocalSearchParams<{
     attractionId?: string;
     festivalId?: string;
@@ -58,8 +54,10 @@ export default function TourVisitPage() {
   } | null>(null);
   const [retryVisible, setRetryVisible] = useState(false);
   const [duplicateVisitMessage, setDuplicateVisitMessage] = useState<string | null>(null);
+  const [detailSheetHeight, setDetailSheetHeight] = useState<number | null>(null);
 
   const mapRef = useRef<TourMapHandle>(null);
+  const lastFocusedLayoutRef = useRef<string | null>(null);
   // 응답이 빨리 오면 스피너를 아예 안 띄워서 화면 전환이 반짝이지 않게 한다.
   const showLoadingIndicator = useDelayedLoading(isLoading);
 
@@ -177,22 +175,27 @@ export default function TourVisitPage() {
     }));
   }, [spots]);
 
-  // 화면에 처음 들어왔을 때만(애니메이션 없이) 선택된 관광지 위치에 자리 잡는다. 이미 들어와 있는
-  // 상태에서 다른 마커를 눌렀을 때의 부드러운 이동은 navigateToAttraction이 클릭 즉시 처리하므로,
-  // 여기서 또 움직이면 안 된다(한 번만 실행되도록 ref로 막음, #37).
-  const hasFocusedInitiallyRef = useRef(false);
+  // 최초 진입과 시트 스냅 높이 변경 시 선택 마커를 실제로 보이는 지도 영역의 중앙에 둔다.
+  // 다른 마커 선택은 navigateToAttraction이 먼저 처리하며, focusKey로 데이터 도착 후 중복 이동을 막는다.
   useEffect(() => {
-    if (!detail || hasFocusedInitiallyRef.current) return;
+    if (!detail || detail.tourSpotId !== attractionId || detailSheetHeight === null) return;
 
     const lat = Number(detail.mapY);
     const lng = Number(detail.mapX);
     if (!detail.mapY.trim() || !detail.mapX.trim() ||
       !Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-    hasFocusedInitiallyRef.current = true;
-    // 권장 줌 레벨 3, 애니메이션 없이 즉시 배치(#37).
-    mapRef.current?.focusOnMarker(lat, lng, undefined, false);
-  }, [detail]);
+    const focusKey = `${detail.tourSpotId}:${detailSheetHeight}`;
+    if (lastFocusedLayoutRef.current === focusKey) return;
+
+    // 최초 진입은 즉시 배치하고, 이후 시트 스냅 높이가 바뀌면 보이는 지도 영역의 새 중앙으로
+    // 부드럽게 재정렬한다. 마커 좌표 자체는 바꾸지 않고 시트 높이를 화면 하단 inset으로 넘긴다.
+    mapRef.current?.focusOnMarker(lat, lng, {
+      animate: lastFocusedLayoutRef.current !== null,
+      bottomInset: detailSheetHeight,
+    });
+    lastFocusedLayoutRef.current = focusKey;
+  }, [attractionId, detail, detailSheetHeight]);
 
   const navigateToAttraction = (targetId: string) => {
     if (targetId === attractionId) return;
@@ -204,7 +207,10 @@ export default function TourVisitPage() {
     const lat = target ? Number(target.mapY) : NaN;
     const lng = target ? Number(target.mapX) : NaN;
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      mapRef.current?.focusOnMarker(lat, lng);
+      mapRef.current?.focusOnMarker(lat, lng, {
+        bottomInset: detailSheetHeight ?? 0,
+      });
+      lastFocusedLayoutRef.current = `${targetId}:${detailSheetHeight ?? 0}`;
     }
 
     // push/replace 둘 다 화면(과 그 안의 지도 WebView)을 통째로 재마운트시켜서 전환마다
@@ -260,11 +266,6 @@ export default function TourVisitPage() {
             selectedMarkerId={attractionId}
             currentLocation={userLocation}
             showLocationButton={false}
-            locationBottom={
-              expanded
-                ? Math.min(600, screenHeight - 196) + 20
-                : TOUR_DETAIL_SHEET_HEIGHT.collapsed + 20
-            }
             onSearchPress={() => router.push({ pathname: '/search/tour', params: { festivalId } })}
             onMarkerPress={handleMarkerPress}
           />
@@ -272,6 +273,7 @@ export default function TourVisitPage() {
             attraction={attraction}
             expanded={expanded}
             visited={visited}
+            onHeightChange={setDetailSheetHeight}
             onClose={() => {
               // router.canGoBack()이 true를 반환해도 실제 back()이 처리되지 않아
               // GO_BACK 에러가 나는 경우가 있어(#53), 뒤로가기 대신 투어 메인으로

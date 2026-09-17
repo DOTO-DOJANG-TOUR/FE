@@ -20,6 +20,7 @@ import { getCachedTourSpot, setCachedTourSpot } from '@/utils/tourSpotCache';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 
 type AttractionWithPoint = { attraction: TourAttraction; point: GeoPoint };
 
@@ -38,7 +39,7 @@ export default function TourMainPage() {
     isOffline: boolean;
   } | null>(null);
   const [locationProblem, setLocationProblem] = useState<LocationProblem | null>(null);
-  const [sheetHeight, setSheetHeight] = useState<number>(TOUR_SHEET_HEIGHT.collapsed);
+  const sheetHeight = useSharedValue<number>(TOUR_SHEET_HEIGHT.collapsed);
   const [stampCountFresh, setStampCountFresh] = useState(false);
   const locationRequestRef = useRef(false);
   // 진행 중인 스탬프 투어가 바뀌면(예: 투어 중단 후 다른 투어 시작) festivalId도 바뀌는데,
@@ -283,9 +284,8 @@ export default function TourMainPage() {
             ref={mapRef}
             markers={markers}
             currentLocation={userLocation}
-            locationBottom={
-              sheetHeight + 20
-            }
+            locationBottomSharedValue={sheetHeight}
+            locationBottomOffset={20}
             onSearchPress={() => router.push({ pathname: '/search/tour', params: { festivalId } })}
             onLocationPress={handleLocationPress}
             onMarkerPress={handleMarkerPress}
@@ -298,7 +298,7 @@ export default function TourMainPage() {
             expanded={expanded}
             title={stampTour.title}
             stampCount={stampCountFresh ? stampTour.stampCount : null}
-            onHeightChange={setSheetHeight}
+            sharedHeight={sheetHeight}
             selectedCategory={selectedCategory}
             attractions={attractions}
             onExpandedChange={setExpanded}

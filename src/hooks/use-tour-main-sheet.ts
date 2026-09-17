@@ -3,13 +3,11 @@ import { Gesture } from 'react-native-gesture-handler';
 import {
   cancelAnimation,
   runOnJS,
+  type SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-
-/* eslint-disable react-hooks/immutability -- Reanimated SharedValue는 UI 스레드 worklet에서
- * .value를 변경하는 것이 공식 사용 방식이며 React state를 변경하지 않는다. */
 
 const DRAG_ACTIVATION_DISTANCE = 8;
 const MIN_VALID_RELEASE_VELOCITY = 80;
@@ -36,16 +34,19 @@ export function useTourMainSheet({
   collapsedHeight,
   expandedHeight,
   onExpandedChange,
+  sharedHeight,
 }: {
   expanded: boolean;
   collapsedHeight: number;
   expandedHeight: number;
   onExpandedChange: (expanded: boolean) => void;
+  sharedHeight?: SharedValue<number>;
 }) {
   'use no memo';
 
   const initialHeight = expanded ? expandedHeight : collapsedHeight;
-  const height = useSharedValue(initialHeight);
+  const internalHeight = useSharedValue(initialHeight);
+  const height = sharedHeight ?? internalHeight;
   const startHeight = useSharedValue(initialHeight);
   const dragOriginY = useSharedValue(0);
   const dragging = useSharedValue(false);
@@ -171,6 +172,7 @@ export function useTourMainSheet({
   const animatedStyle = useAnimatedStyle(() => ({ height: height.value }));
 
   return {
+    height,
     animatedStyle,
     headerGesture,
     bodyGesture,

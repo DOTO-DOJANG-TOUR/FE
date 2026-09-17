@@ -1,5 +1,12 @@
 import { FontFamily, FontSize, Spacing } from '@/constants/theme';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { CultureIcon, ExperienceIcon, HistoryIcon, MenuIcon, NatureIcon } from '../icons';
 
 type Category = 'menu' | 'culture' | 'history' | 'nature' | 'experience';
@@ -8,6 +15,7 @@ type Props = {
   category: Category;
   selected?: boolean;
   onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
 };
 
 const categoryConfig = {
@@ -37,6 +45,7 @@ export const CategoryBadge = ({
   category,
   selected = false,
   onPress,
+  style,
 }: Props) => {
   const config = categoryConfig[category];
   const Icon = config.Icon;
@@ -46,6 +55,7 @@ export const CategoryBadge = ({
   return (
     <Pressable style={[
       styles.badge,
+      style,
       isSelected && styles.selectedBadge,
     ]}
       onPress={onPress}
