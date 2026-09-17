@@ -44,6 +44,7 @@ export default function TourVisitPage() {
   const initialCached =
     festivalId && attractionId ? getCachedTourSpot(festivalId, attractionId) : undefined;
   const [detail, setDetail] = useState<TourSpotDetail | null>(initialCached?.detail ?? null);
+  const detailRef = useRef<TourSpotDetail | null>(detail);
   const [spots, setSpots] = useState<TourContent[]>(initialCached?.spots ?? []);
   const [isLoading, setIsLoading] = useState(
     () => !!festivalId && !!attractionId && !initialCached,
@@ -61,6 +62,10 @@ export default function TourVisitPage() {
   const lastFocusedLayoutRef = useRef<string | null>(null);
   // 응답이 빨리 오면 스피너를 아예 안 띄워서 화면 전환이 반짝이지 않게 한다.
   const showLoadingIndicator = useDelayedLoading(isLoading);
+
+  useEffect(() => {
+    detailRef.current = detail;
+  }, [detail]);
 
   // 지도에서 다른 마커를 눌러 attractionId가 바뀌면(같은 화면 인스턴스가 재사용됨) 이전 관광지의
   // visited/expanded 상태가 남아있지 않도록 렌더 중에 리셋한다(React 공식 "Adjusting state on prop
@@ -84,14 +89,14 @@ export default function TourVisitPage() {
 
   useEffect(() => {
     if (!festivalId || !attractionId) return;
-    // detail이 이미 이 attractionId 것이면(프리페치·캐시로 위에서 채워짐) 다시 받아올 필요 없다.
-    if (detail?.tourSpotId === attractionId) return;
 
     let isMounted = true;
 
     const fetchData = async () => {
       try {
-        setIsLoading(true);
+        // 캐시가 있으면 기존 상세를 즉시 보여주고, 로딩 화면 없이 최신 필드를 백그라운드에서
+        // 갱신한다. 캐시가 없거나 다른 관광지 데이터만 남아 있을 때만 전체 로딩을 표시한다.
+        if (detailRef.current?.tourSpotId !== attractionId) setIsLoading(true);
         const [spotDetail, allSpots] = await Promise.all([
           getTourSpotDetail(festivalId, attractionId),
           getTourSpots(festivalId),
@@ -110,8 +115,9 @@ export default function TourVisitPage() {
           // 전환 실패 시 이전 관광지 내용을 그대로 유지하면 URL·선택 마커는 새 관광지를
           // 가리키는데 상세 시트는 이전 관광지를 보여주는 상태가 된다 — 이전 관광지로
           // 되돌려서 화면 전체가 다시 일치하게 한다.
-          if (detail && detail.tourSpotId !== attractionId) {
-            router.setParams({ attractionId: detail.tourSpotId });
+          const visibleDetail = detailRef.current;
+          if (visibleDetail && visibleDetail.tourSpotId !== attractionId) {
+            router.setParams({ attractionId: visibleDetail.tourSpotId });
           }
           if (isRetryableError(error)) {
             setFailedRequest({
@@ -130,7 +136,7 @@ export default function TourVisitPage() {
     return () => {
       isMounted = false;
     };
-  }, [festivalId, attractionId, reloadTrigger, detail, router]);
+  }, [festivalId, attractionId, reloadTrigger, router]);
 
   const attraction = useMemo<TourAttraction | null>(() => {
     if (!detail) return null;

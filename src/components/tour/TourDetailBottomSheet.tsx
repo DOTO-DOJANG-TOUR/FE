@@ -18,6 +18,12 @@ type Props = {
   onHeightChange?: (height: number) => void;
 };
 
+function normalizeHomepageUrl(value?: string) {
+  const url = value?.trim() ?? '';
+  if (!url) return '';
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
+
 export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, onExpandedChange,
   onVisited, onRequestVisit, onHeightChange }: Props) {
   const { height: screenHeight, width } = useWindowDimensions();
@@ -42,7 +48,7 @@ export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, 
   const photoSlots = Array.from({ length: 4 }, (_, index) => photos[index] ?? '');
   const address = attraction.address.trim() || '-';
   const phone = attraction.phone?.trim() || '';
-  const homepage = attraction.homepage?.trim() || '';
+  const homepageUrl = normalizeHomepageUrl(attraction.homepage);
 
   useEffect(() => {
     if (bodyHeight === null || titleHeight === null) return;
@@ -81,8 +87,9 @@ export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, 
             <InfoRow icon="space" text={address} />
             <InfoRow icon="call" text={phone || '-'}
               onPress={phone ? () => openLink(`tel:${phone}`) : undefined} />
-            <InfoRow icon="page" text={homepage ? '홈페이지 바로가기' : '-'} isLink={!!homepage}
-              onPress={homepage ? () => openLink(homepage) : undefined} />
+            <InfoRow icon="page" text={homepageUrl ? '홈페이지 바로가기' : '-'}
+              isLink={!!homepageUrl}
+              onPress={homepageUrl ? () => openLink(homepageUrl) : undefined} />
           </View>
         </View>
       </ScrollView></GestureDetector></View></GestureDetector>
