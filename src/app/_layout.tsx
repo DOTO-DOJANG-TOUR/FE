@@ -29,6 +29,7 @@ export default function RootLayout() {
   const [customSplashElapsed, setCustomSplashElapsed] = useState(false);
 
   const splashTransitionStartedRef = useRef(false);
+  const [initialSplashFinished, setInitialSplashFinished] = useState(false);
 
   const handleSplashLayout = async () => {
     if (splashTransitionStartedRef.current) return;
@@ -114,13 +115,27 @@ export default function RootLayout() {
     nativeSplashHidden &&
     customSplashElapsed;
 
+  useEffect(() => {
+    if (
+      appReady &&
+      nativeSplashHidden &&
+      customSplashElapsed
+    ) {
+      setInitialSplashFinished(true);
+    }
+  }, [
+    appReady,
+    nativeSplashHidden,
+    customSplashElapsed,
+  ]);
+
   const fontsReady = loaded || !!fontError;
 
   if (!fontsReady) {
     return null;
   }
 
-  if (!ready) {
+  if (!initialSplashFinished) {
     return (
       <AuthLoadingScreen
         onLayout={handleSplashLayout}
