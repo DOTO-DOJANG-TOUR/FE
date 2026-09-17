@@ -17,6 +17,7 @@ const WATCH_OPTIONS = {
 // '내 위치' 버튼을 눌렀을 때(useCurrentLocation의 requestLocation)만 뜬다.
 export function useLiveLocationWatch() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -43,8 +44,14 @@ export function useLiveLocationWatch() {
         subscription?.remove();
         setCoords(null);
       };
-    }, []),
+      // refreshKey는 본문에서 읽지 않지만, '내 위치' 버튼으로 권한을 막 허용한 직후
+      // 콜백 identity를 바꿔 포커스 전환 없이도 구독을 다시 시작하게 하는 용도다 — 포커스
+      // 시점엔 권한이 없어 구독을 못 열었던 화면이 버튼 승인 후에도 계속 못 여는 걸 막는다.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [refreshKey]),
   );
 
-  return coords;
+  const refresh = useCallback(() => setRefreshKey((key) => key + 1), []);
+
+  return { coords, refresh };
 }

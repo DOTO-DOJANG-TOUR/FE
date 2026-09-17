@@ -68,7 +68,7 @@ export default function TourMainPage() {
   } = useCurrentLocation();
   // 지도 위 '내 위치' 점은 이 화면에 머무는 동안 실시간으로 갱신한다. 아직 위치 권한이
   // 없으면(watch가 시작되지 않아) null이라, 버튼을 눌러 받아온 마지막 좌표로 대체한다.
-  const liveLocation = useLiveLocationWatch();
+  const { coords: liveLocation, refresh: refreshLiveLocation } = useLiveLocationWatch();
 
   // 탭을 벗어났다 돌아와도(투어 시작/중단 직후 등) 최신 상태를 다시 받아오도록 마운트가 아닌
   // 포커스 시점마다 조회한다 — 하단 탭은 화면이 유지된 채로 전환되기 때문에 마운트 1회로는 부족하다.
@@ -261,8 +261,15 @@ export default function TourMainPage() {
     setLocationProblem(null);
     try {
       const result = await requestLocation();
-      if (result.coords) mapRef.current?.focusOnCurrentLocation(result.coords.lat, result.coords.lng);
-      else setLocationProblem(result.problem);
+      if (result.coords) {
+        // 이 화면에 처음 들어와 권한이 없던 상태였다면 실시간 구독이 아직 시작 못 했을 수
+        // 있다 — 방금 허용됐으니 다시 시작한다(watch는 포커스 전환에만 반응해 스스로는
+        // 이 권한 변화를 못 알아챔).
+        refreshLiveLocation();
+        mapRef.current?.focusOnCurrentLocation(result.coords.lat, result.coords.lng);
+      } else {
+        setLocationProblem(result.problem);
+      }
     } finally {
       locationRequestRef.current = false;
       setIsLocationButtonLoading(false);

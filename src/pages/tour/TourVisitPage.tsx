@@ -36,7 +36,7 @@ export default function TourVisitPage() {
   }>();
 
   const { coords: userLocation, checkLocation, requestLocation } = useCurrentLocation();
-  const liveLocation = useLiveLocationWatch();
+  const { coords: liveLocation, refresh: refreshLiveLocation } = useLiveLocationWatch();
   const [locationProblem, setLocationProblem] = useState<LocationProblem | null>(null);
   const [mapLocationProblem, setMapLocationProblem] = useState<LocationProblem | null>(null);
   const [isLocationButtonLoading, setIsLocationButtonLoading] = useState(false);
@@ -253,6 +253,9 @@ export default function TourVisitPage() {
     try {
       const result = await requestLocation();
       if (result.coords) {
+        // 이 화면에 처음 들어와 권한이 없던 상태였다면 실시간 구독이 아직 시작 못 했을 수
+        // 있다 — 방금 허용됐으니 다시 시작한다.
+        refreshLiveLocation();
         // 관광지 상세는 마커를 선택할 때와 마찬가지로 바텀시트에 가려지지 않는 영역
         // 기준으로 중앙 정렬한다(투어 메인은 바텀시트를 뺀 정렬을 안 쓰므로 그대로 둔다).
         mapRef.current?.focusOnCurrentLocation(
