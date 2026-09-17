@@ -10,9 +10,8 @@ import { ErrorModal } from '@/components/common/ErrorModal';
 import { LoadingIndicator } from '@/components/common/LoadingIndicator';
 import { TOUR_SHEET_HEIGHT, TourBottomSheet } from '@/components/tour/TourBottomSheet';
 import { TourMap, type TourMapHandle, type TourMapMarker } from '@/components/tour/TourMap';
-import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
+import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { mapTourCategory } from '@/constants/tourCategory';
-import { TourColors } from '@/constants/tourTheme';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useDelayedLoading } from '@/hooks/use-delayed-loading';
 import type { StampTourDetail, TourAttraction, TourFilterCategory } from '@/types/tour';
@@ -20,7 +19,7 @@ import { declutterCoordinates, parseDistanceMeters, selectNearbySpots, type GeoP
 import { getCachedTourSpot, setCachedTourSpot } from '@/utils/tourSpotCache';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 type AttractionWithPoint = { attraction: TourAttraction; point: GeoPoint };
 
@@ -61,6 +60,7 @@ export default function TourMainPage() {
   const mapRef = useRef<TourMapHandle>(null);
   const {
     coords: userLocation,
+    isLoading: isLocationLoading,
     requestLocation,
     checkLocation,
   } = useCurrentLocation();
@@ -291,6 +291,7 @@ export default function TourMainPage() {
             onMarkerPress={handleMarkerPress}
             onReady={() => setMapReady(true)}
             onLoadError={() => setMapLoadError(true)}
+            isLocationLoading={isLocationLoading}
           />
 
           <TourBottomSheet
@@ -311,16 +312,18 @@ export default function TourMainPage() {
           {/* 지도 SDK가 뜰 때까지 바텀시트·검색바까지 같이 가려서 컴포넌트 단위가 아닌
               페이지 단위 로딩으로 보이게 한다. 에러가 나면 TourMap 자체의 재시도 UI로 넘긴다. */}
           {!mapReady && !mapLoadError && (
-            <View style={[StyleSheet.absoluteFill, styles.loadingContainer, styles.mapLoadingOverlay]}>
+            <View style={[StyleSheet.absoluteFill, styles.loadingContainer, styles.pageLoadingOverlay]}>
               {showMapLoadingIndicator && <LoadingIndicator />}
             </View>
           )}
         </>
       )}
 
+      {/* 관광지 상세로 이동하기 전 데이터를 미리 받아두는 동안(#37) — 화면은 그대로 두되
+          작은 배지 대신 페이지 전체를 덮어서, 오래 걸릴 때 멈춘 것처럼 보이지 않게 한다. */}
       {showNavigatingIndicator && (
-        <View pointerEvents="none" style={styles.navigatingBadge}>
-          <ActivityIndicator size="small" color={Colors.pink.pink50} />
+        <View style={[StyleSheet.absoluteFill, styles.loadingContainer, styles.pageLoadingOverlay]}>
+          <LoadingIndicator />
         </View>
       )}
 
@@ -356,20 +359,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mapLoadingOverlay: {
+  pageLoadingOverlay: {
     backgroundColor: Colors.gray.gray20,
-  },
-  navigatingBadge: {
-    position: 'absolute',
-    top: 106,
-    alignSelf: 'center',
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: Radius.full,
-    backgroundColor: Colors.gray.gray00,
-    boxShadow: TourColors.locationShadow,
   },
   noTourContainer: {
     flex: 1,

@@ -12,7 +12,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import WebView, { type WebViewMessageEvent } from 'react-native-webview';
 import { getKakaoMapHtml } from './kakaoMapHtml';
 import { CurrentLocationIcon } from './TourIcons';
@@ -42,6 +42,7 @@ type Props = {
   currentLocation?: { lat: number; lng: number } | null;
   showLocationButton?: boolean;
   locationBottom?: number;
+  isLocationLoading?: boolean;
   onSearchPress?: () => void;
   onLocationPress?: () => void;
   onMarkerPress?: (markerId: string) => void;
@@ -60,6 +61,7 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
     currentLocation = null,
     showLocationButton = true,
     locationBottom = 192,
+    isLocationLoading = false,
     onSearchPress,
     onLocationPress,
     onMarkerPress,
@@ -249,7 +251,11 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
           style={[styles.locationButton, { bottom: locationBottom }]}
           onPress={onLocationPress}
         >
-          <CurrentLocationIcon />
+          {isLocationLoading ? (
+            <ActivityIndicator size="small" color={Colors.gray.gray90} />
+          ) : (
+            <CurrentLocationIcon />
+          )}
         </Pressable>
       )}
     </View>
