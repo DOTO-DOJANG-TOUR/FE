@@ -109,8 +109,7 @@ export default function RootLayout() {
                 배경색으로 칠해지기 전 잠깐 흰 화면이 보이던 문제 — visit 화면과 같은 방식으로
                 완화한다. */}
             <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-            <Stack.Screen name="festival-detail" />
-            <Stack.Screen name="festival-search" />
+            <Stack.Screen name="festival-detail/[id]" />
             <Stack.Screen name="search" />
             <Stack.Screen name="visit" options={{ animation: 'fade' }} />
             <Stack.Screen name="stamp-detail/[id]" />
