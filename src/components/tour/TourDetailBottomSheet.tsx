@@ -95,6 +95,7 @@ export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, 
       </ScrollView></GestureDetector></View></GestureDetector>
       <View style={[styles.buttonArea, { paddingBottom: bottomPadding }]}>
         <DojangTourButton status={visited ? 'alreadyVisited' : 'visitAndStamp'}
+          loading={checkingPermission}
           onPress={checkingPermission || visited ? undefined : async () => {
             setCheckingPermission(true);
             try { if (await onRequestVisit()) setConfirmVisible(true); }
