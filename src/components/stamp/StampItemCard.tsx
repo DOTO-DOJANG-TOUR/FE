@@ -20,7 +20,6 @@ type BadgeStatus =
 
 const getBadgeStatus = (
     status: DojangTourStatus,
-    stampCount: number,
 ): BadgeStatus => {
     if (status === 'REWARDED') {
         return 'REWARDED';
@@ -30,7 +29,7 @@ const getBadgeStatus = (
         return 'FESTIVAL_ENDED';
     }
 
-    if (status === 'PROGRESS' && stampCount >= 3) {
+    if (status === 'COMPLETED') {
         return 'REWARD';
     }
 
@@ -43,7 +42,6 @@ export default function StampItemCard({
 }: Props) {
     const badgeStatus = getBadgeStatus(
         stamp.status,
-        stamp.stampCount,
     );
 
     return (

@@ -1,4 +1,5 @@
 import { setSessionExpiredHandler } from '@/apis/client';
+import { AuthLoadingScreen } from '@/components/auth/AuthLoadingScreen';
 import { TourVisitRestoreErrorScreen } from '@/components/tour/TourVisitRestoreErrorScreen';
 import { useAuthStore } from '@/stores/authStore';
 import { useTourVisitStore } from '@/stores/tourVisitStore';
@@ -10,7 +11,7 @@ import {
   ThemeProvider,
 } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppState, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -23,6 +24,34 @@ export default function RootLayout() {
     PretendardSemiBold: require('../../assets/fonts/Pretendard-SemiBold.otf'),
     PretendardBold: require('../../assets/fonts/Pretendard-Bold.otf'),
   });
+
+  const [nativeSplashHidden, setNativeSplashHidden] = useState(false);
+  const [customSplashElapsed, setCustomSplashElapsed] = useState(false);
+
+  const splashTransitionStartedRef = useRef(false);
+  const [initialSplashFinished, setInitialSplashFinished] = useState(false);
+
+  const handleSplashLayout = async () => {
+    if (splashTransitionStartedRef.current) return;
+
+    splashTransitionStartedRef.current = true;
+
+    try {
+      await SplashScreen.hideAsync();
+    } finally {
+      setNativeSplashHidden(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!nativeSplashHidden) return;
+
+    const timeout = setTimeout(() => {
+      setCustomSplashElapsed(true);
+    }, 1600);
+
+    return () => clearTimeout(timeout);
+  }, [nativeSplashHidden]);
 
   const colorScheme = useColorScheme();
   const storedStatus = useAuthStore((state) => state.status);
@@ -72,21 +101,46 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, [status, restoreTourVisit]);
 
-  const restoringTourVisit = status === 'authenticated' && tourVisitStatus === 'restoring';
+  const restoringTourVisit =
+    status === 'authenticated' &&
+    tourVisitStatus === 'restoring';
 
-  const ready =
+  const appReady =
     (loaded || !!fontError) &&
     status !== 'initializing' &&
     !restoringTourVisit;
 
+  const ready =
+    appReady &&
+    nativeSplashHidden &&
+    customSplashElapsed;
+
   useEffect(() => {
-    if (!ready) return;
+    if (
+      appReady &&
+      nativeSplashHidden &&
+      customSplashElapsed
+    ) {
+      setInitialSplashFinished(true);
+    }
+  }, [
+    appReady,
+    nativeSplashHidden,
+    customSplashElapsed,
+  ]);
 
-    SplashScreen.hideAsync().catch(() => undefined);
-  }, [ready]);
+  const fontsReady = loaded || !!fontError;
 
-  if (!ready) {
+  if (!fontsReady) {
     return null;
+  }
+
+  if (!initialSplashFinished) {
+    return (
+      <AuthLoadingScreen
+        onLayout={handleSplashLayout}
+      />
+    );
   }
 
   if (status === 'authenticated' && tourVisitStatus === 'error') {
