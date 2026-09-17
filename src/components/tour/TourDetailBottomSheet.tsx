@@ -16,6 +16,7 @@ type Props = {
   onClose: () => void; onExpandedChange: (expanded: boolean) => void;
   onVisited: () => void; onRequestVisit: () => Promise<boolean>;
   onHeightChange?: (height: number) => void;
+  onLiveHeightChange?: (height: number) => void;
 };
 
 function normalizeHomepageUrl(value?: string) {
@@ -25,7 +26,7 @@ function normalizeHomepageUrl(value?: string) {
 }
 
 export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, onExpandedChange,
-  onVisited, onRequestVisit, onHeightChange }: Props) {
+  onVisited, onRequestVisit, onHeightChange, onLiveHeightChange }: Props) {
   const { height: screenHeight, width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [bodyHeight, setBodyHeight] = useState<number | null>(null);
@@ -42,7 +43,7 @@ export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, 
     collapsedHeight + measuredBodyHeight + 20, screenHeight - insets.top - 120,
   ));
   const { height, headerPanHandlers, bodyGesture, nativeScrollGesture, onScroll } = useTourSheet({
-    expanded, collapsedHeight, expandedHeight, onExpandedChange,
+    expanded, collapsedHeight, expandedHeight, onExpandedChange, onHeightChange: onLiveHeightChange,
   });
   const photos = attraction.imageUrls.filter((uri) => uri?.trim());
   const photoSlots = Array.from({ length: 4 }, (_, index) => photos[index] ?? '');

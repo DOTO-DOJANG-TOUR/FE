@@ -36,6 +36,10 @@ export default function TourVisitPage() {
 
   const { coords: userLocation, checkLocation, requestLocation } = useCurrentLocation();
   const [locationProblem, setLocationProblem] = useState<LocationProblem | null>(null);
+  const [mapLocationProblem, setMapLocationProblem] = useState<LocationProblem | null>(null);
+  const [isLocationButtonLoading, setIsLocationButtonLoading] = useState(false);
+  const [sheetLiveHeight, setSheetLiveHeight] = useState(0);
+  const locationRequestRef = useRef(false);
   useEffect(() => { void checkLocation(); }, [checkLocation]);
   const [expanded, setExpanded] = useState(true);
   const [visited, setVisited] = useState(visitedParam === '1');
@@ -239,6 +243,21 @@ export default function TourVisitPage() {
     navigateToAttraction(markerId);
   };
 
+  const handleLocationPress = async () => {
+    if (locationRequestRef.current) return;
+    locationRequestRef.current = true;
+    setIsLocationButtonLoading(true);
+    setMapLocationProblem(null);
+    try {
+      const result = await requestLocation();
+      if (result.coords) mapRef.current?.focusOnCurrentLocation(result.coords.lat, result.coords.lng);
+      else setMapLocationProblem(result.problem);
+    } finally {
+      locationRequestRef.current = false;
+      setIsLocationButtonLoading(false);
+    }
+  };
+
   const handleVisit = async () => {
     if (!attraction || !festivalId) return;
 
@@ -281,17 +300,20 @@ export default function TourVisitPage() {
             markers={markers}
             selectedMarkerId={attractionId}
             currentLocation={userLocation}
-            showLocationButton={false}
+            locationBottom={sheetLiveHeight + 20}
             onSearchPress={() => router.push({ pathname: '/search/tour', params: { festivalId } })}
+            onLocationPress={handleLocationPress}
             onMarkerPress={handleMarkerPress}
             onReady={() => setMapReady(true)}
             onLoadError={() => setMapLoadError(true)}
+            isLocationLoading={isLocationButtonLoading}
           />
           <TourDetailBottomSheet
             attraction={attraction}
             expanded={expanded}
             visited={visited}
             onHeightChange={setDetailSheetHeight}
+            onLiveHeightChange={setSheetLiveHeight}
             onClose={() => {
               // router.canGoBack()이 true를 반환해도 실제 back()이 처리되지 않아
               // GO_BACK 에러가 나는 경우가 있어(#53), 뒤로가기 대신 투어 메인으로
@@ -353,6 +375,7 @@ export default function TourVisitPage() {
       />
 
       <LocationProblemModal problem={locationProblem} purpose="visit" onClose={() => setLocationProblem(null)} />
+      <LocationProblemModal problem={mapLocationProblem} purpose="map" onClose={() => setMapLocationProblem(null)} />
     </View>
   );
 }
