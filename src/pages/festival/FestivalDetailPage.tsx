@@ -1,4 +1,3 @@
-import { PageLoadingIndicator } from '@/components/common/PageLoadingIndicator';
 import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import { getFestivalDetail, getFestivalDojangTourStatus } from '@/apis/festival';
 import { startStampTour, stopStampTour } from '@/apis/stamp';
@@ -8,6 +7,7 @@ import { DojangTourButton } from '@/components/common/DojangTourButton';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { FestivalCategoryBadge } from '@/components/common/FestivalCategoryBadge';
 import { FestivalStatusBadge } from '@/components/common/FestivalStatusBadge';
+import { PageLoadingIndicator } from '@/components/common/PageLoadingIndicator';
 import DescriptionBlock from '@/components/festival/detail/DescriptionBlock';
 import { BackIcon } from '@/components/icons/BackIcon';
 import { LocationIcon } from '@/components/icons/LocationIcon';
@@ -352,8 +352,6 @@ export default function FestivalDetailPage({
                     <View style={styles.titleBox}>
                         <Text
                             style={styles.title}
-                            numberOfLines={1}
-                            ellipsizeMode='tail'
                         >{festival.title}</Text>
                         <View style={styles.badgeBox}>
                             <FestivalStatusBadge
