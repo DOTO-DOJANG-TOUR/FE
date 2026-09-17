@@ -17,7 +17,7 @@ import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { DojangTourButtonStatus, FestivalDetail } from '@/types/festival';
 import { mapDojangTourStatus } from '@/utils/dojangStatus';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ImageBackground, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +31,9 @@ export default function FestivalDetailPage({
 }: Props) {
     const insets = useSafeAreaInsets();
     const router = useRouter();
+    const { from } = useLocalSearchParams<{
+        from?: string;
+    }>();
     const [pageLoading, setPageLoading] = useState(true);
     const [failedImageUri, setFailedImageUri] = useState<string | undefined>();
     const [isStopModalVisible, setIsStopModalVisible] = useState(false);
@@ -327,6 +330,20 @@ export default function FestivalDetailPage({
         await refreshDojangStatus();
     };
 
+    const handleBack = () => {
+        if (from === 'stamp' && dojangStatus === 'start') {
+            router.replace('/(tabs)/stamp');
+            return;
+        }
+
+        if (router.canGoBack()) {
+            router.back();
+            return;
+        }
+
+        router.replace('/(tabs)');
+    };
+
     return (
         <View style={styles.container}>
             <ScrollView
@@ -349,7 +366,7 @@ export default function FestivalDetailPage({
                                 top: insets.top,
                             },
                         ]}
-                        onPress={() => router.back()}
+                        onPress={handleBack}
                     >
                         <BackIcon color={Colors.gray.gray00} />
                     </Pressable>

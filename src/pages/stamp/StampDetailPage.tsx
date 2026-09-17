@@ -265,6 +265,7 @@ export default function FestivalDetailPage({
                   pathname: '/festival-detail/[id]',
                   params: {
                     id: stampDetail.festivalId,
+                    from: 'stamp',
                   },
                 });
               }}
@@ -429,6 +430,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 20,
   },
   imageSection: {
     width: '100%',
