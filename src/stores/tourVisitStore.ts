@@ -1,4 +1,5 @@
 import { getCurrentVisitTourSpot } from '@/apis/tourVisit';
+import { useAuthStore } from '@/stores/authStore';
 import { getCachedFestivalId, saveActiveVisitFestivalId } from '@/utils/tourVisitCache';
 import { create } from 'zustand';
 
@@ -34,6 +35,11 @@ export const useTourVisitStore = create<TourVisitState>((set) => ({
   restore: async () => {
     try {
       const current = await getCurrentVisitTourSpot();
+      // 조회 도중 로그아웃되면(토큰 정리가 비동기라 요청 자체는 성공할 수 있다) 이미 지난
+      // 결과를 반영하지 않는다 — 안 그러면 로그인 화면으로 전환된 직후 잠깐 살아있던
+      // 활성 방문 상태가 다시 'active'로 덮어써 라우팅 가드가 두 번 갈아끼워진다.
+      if (useAuthStore.getState().status !== 'authenticated') return;
+
       if (!current) {
         set({
           status: 'idle',
@@ -46,6 +52,7 @@ export const useTourVisitStore = create<TourVisitState>((set) => ({
       }
 
       const festivalId = await getCachedFestivalId(current.tourSpotId);
+      if (useAuthStore.getState().status !== 'authenticated') return;
       set({
         status: 'active',
         festivalId,
@@ -54,6 +61,7 @@ export const useTourVisitStore = create<TourVisitState>((set) => ({
         expiresAt: current.expiresAt,
       });
     } catch {
+      if (useAuthStore.getState().status !== 'authenticated') return;
       set({ status: 'error' });
     }
   },
