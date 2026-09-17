@@ -275,6 +275,13 @@ export default function FestivalDetailPage({
 
     const handleDojangButtonPress = async () => {
         if (dojangStatus === 'start') {
+            // 버튼의 loading은 handleStartTour 안에서만 켜지는데, 그 전에 위치 권한
+            // 확인(길면 수 초)이 먼저 끝나야 해서 그 사이엔 버튼이 그대로 눌려 있었다.
+            // 이 틈에 두 번 눌리면 시작 요청이 중복으로 나가 두 번째 요청이 항상
+            // "요청이 현재 상태와 충돌합니다" 에러로 실패한다 — 여기서 먼저 막는다.
+            if (isStartingTour) return;
+            setIsStartingTour(true);
+
             // 거부하거나 실패해도 투어 시작 가능
             try {
                 await requestLocation();
