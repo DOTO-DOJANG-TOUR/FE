@@ -39,6 +39,7 @@ type FocusOnMarkerOptions = {
   level?: number;
   animate?: boolean;
   bottomInset?: number;
+  markerOffsetY?: number;
 };
 
 export type TourMapHandle = {
@@ -139,8 +140,9 @@ export const TourMap = forwardRef<TourMapHandle, Props>(function TourMap(
       const level = options.level ?? DEFAULT_MARKER_FOCUS_LEVEL;
       const animate = options.animate ?? true;
       const bottomInset = Math.max(0, options.bottomInset ?? 0);
+      const markerOffsetY = options.markerOffsetY ?? 0;
       runInWebView(
-        `window.__dotoMap.setCenter(${lat}, ${lng}, ${level}, ${animate}, ${bottomInset});`,
+        `window.__dotoMap.setCenter(${lat}, ${lng}, ${level}, ${animate}, ${bottomInset}, ${markerOffsetY});`,
       );
     },
     focusOnCurrentLocation: (lat, lng, level) => {

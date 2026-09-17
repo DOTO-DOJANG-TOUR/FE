@@ -24,6 +24,7 @@ const DUPLICATE_VISIT_ERROR_CODES = new Set([
   'TOUR-SPOT-VISIT-409-001',
   'STAMP-409-001',
 ]);
+const EXPANDED_MARKER_OFFSET_Y = 36;
 
 export default function TourVisitPage() {
   const router = useRouter();
@@ -185,17 +186,20 @@ export default function TourVisitPage() {
     if (!detail.mapY.trim() || !detail.mapX.trim() ||
       !Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-    const focusKey = `${detail.tourSpotId}:${detailSheetHeight}`;
+    const focusKey = expanded
+      ? `${detail.tourSpotId}:expanded:${detailSheetHeight}`
+      : `${detail.tourSpotId}:collapsed`;
     if (lastFocusedLayoutRef.current === focusKey) return;
 
-    // 최초 진입은 즉시 배치하고, 이후 시트 스냅 높이가 바뀌면 보이는 지도 영역의 새 중앙으로
-    // 부드럽게 재정렬한다. 마커 좌표 자체는 바꾸지 않고 시트 높이를 화면 하단 inset으로 넘긴다.
+    // 펼친 상태에서는 시트를 제외한 지도 영역의 중앙보다 살짝 아래에 두고, 접힌 상태에서는
+    // 기존 동작처럼 전체 지도 화면의 정중앙에 둔다.
     mapRef.current?.focusOnMarker(lat, lng, {
       animate: lastFocusedLayoutRef.current !== null,
-      bottomInset: detailSheetHeight,
+      bottomInset: expanded ? detailSheetHeight : 0,
+      markerOffsetY: expanded ? EXPANDED_MARKER_OFFSET_Y : 0,
     });
     lastFocusedLayoutRef.current = focusKey;
-  }, [attractionId, detail, detailSheetHeight]);
+  }, [attractionId, detail, detailSheetHeight, expanded]);
 
   const navigateToAttraction = (targetId: string) => {
     if (targetId === attractionId) return;
@@ -208,9 +212,12 @@ export default function TourVisitPage() {
     const lng = target ? Number(target.mapX) : NaN;
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
       mapRef.current?.focusOnMarker(lat, lng, {
-        bottomInset: detailSheetHeight ?? 0,
+        bottomInset: expanded ? (detailSheetHeight ?? 0) : 0,
+        markerOffsetY: expanded ? EXPANDED_MARKER_OFFSET_Y : 0,
       });
-      lastFocusedLayoutRef.current = `${targetId}:${detailSheetHeight ?? 0}`;
+      lastFocusedLayoutRef.current = expanded
+        ? `${targetId}:expanded:${detailSheetHeight ?? 0}`
+        : `${targetId}:collapsed`;
     }
 
     // push/replace 둘 다 화면(과 그 안의 지도 WebView)을 통째로 재마운트시켜서 전환마다
