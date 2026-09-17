@@ -60,7 +60,7 @@ export default function StampItemCard({
                 }
             />
             <View style={styles.infoBox}>
-                <View>
+                <View style={styles.infoText}>
                     <Text
                         style={styles.title}
                         numberOfLines={1}
@@ -72,7 +72,7 @@ export default function StampItemCard({
                         <Text style={styles.endDate}>{stamp.eventEndDate.replace(/-/g, '.')}까지</Text>
                     </View>
                 </View>
-                <View>
+                <View style={styles.badge}>
                     <FestivalStatusBadge
                         status={badgeStatus}
                         paddingHorizontal={10}
@@ -99,12 +99,17 @@ const styles = StyleSheet.create({
         borderTopRightRadius: Radius.md,
     },
     infoBox: {
+        width: '100%',
         flexDirection: 'row',
         paddingHorizontal: 16,
         paddingVertical: 12,
         justifyContent: 'space-between',
         alignItems: 'center',
         gap: 50,
+    },
+    infoText: {
+        flex: 1,
+        minWidth: 0,
     },
     title: {
         fontFamily: FontFamily.semiBold,
@@ -127,5 +132,8 @@ const styles = StyleSheet.create({
         fontSize: FontSize.sm,
         lineHeight: FontSize.sm * 1.5,
         color: Colors.gray.gray100,
+    },
+    badge: {
+        flexShrink: 0,
     },
 });
