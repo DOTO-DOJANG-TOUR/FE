@@ -8,6 +8,7 @@ import { TourAsset } from './TourAsset';
 import { GestureDetector } from 'react-native-gesture-handler';
 import {
   Animated,
+  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -108,23 +109,26 @@ export function TourBottomSheet({
       {(
         <GestureDetector gesture={bodyGesture}><View style={styles.listArea}>
           {attractions.length > 0 ? (
-            <GestureDetector gesture={nativeScrollGesture}><ScrollView
+            // 관광지 수가 많으면(이미지 포함) ScrollView는 전부 한 번에 마운트되어, 시트
+            // 높이 애니메이션(useNativeDriver:false라 매 프레임 레이아웃 재계산)과 겹치면
+            // 버벅였다 — FlatList로 바꿔 화면에 보이는 항목만 렌더링한다.
+            <GestureDetector gesture={nativeScrollGesture}><FlatList
+              data={attractions}
+              keyExtractor={(attraction) => attraction.id}
               showsVerticalScrollIndicator={false}
               onScroll={onScroll}
               scrollEventThrottle={16}
               bounces={false}
               nestedScrollEnabled
               contentContainerStyle={styles.listContent}
-            >
-              {attractions.map((attraction) => (
+              renderItem={({ item: attraction }) => (
                 <TourAttractionCard
-                  key={attraction.id}
                   attraction={attraction}
                   showCategory={selectedCategory === 'menu'}
                   onPress={() => onAttractionPress(attraction)}
                 />
-              ))}
-            </ScrollView></GestureDetector>
+              )}
+            /></GestureDetector>
           ) : (
             <View style={styles.emptyContainer}>
               <TourAsset name="empty" />
