@@ -4,7 +4,7 @@ import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { TourColors, TourTypography } from '@/constants/tourTheme';
 import { useTourSheet } from '@/hooks/use-tour-sheet';
 import type { TourAttraction } from '@/types/tour';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Linking, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TourAsset } from './TourAsset';
@@ -15,24 +15,31 @@ type Props = {
   attraction: TourAttraction; expanded: boolean; visited: boolean;
   onClose: () => void; onExpandedChange: (expanded: boolean) => void;
   onVisited: () => void; onRequestVisit: () => Promise<boolean>;
+  onHeightChange?: (height: number) => void;
 };
 
-const COLLAPSED_HEIGHT = 184;
+function normalizeHomepageUrl(value?: string) {
+  const url = value?.trim() ?? '';
+  if (!url) return '';
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
 
 export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, onExpandedChange,
-  onVisited, onRequestVisit }: Props) {
+  onVisited, onRequestVisit, onHeightChange }: Props) {
   const { height: screenHeight, width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const [bodyHeight, setBodyHeight] = useState(214);
-  const [titleHeight, setTitleHeight] = useState(33);
+  const [bodyHeight, setBodyHeight] = useState<number | null>(null);
+  const [titleHeight, setTitleHeight] = useState<number | null>(null);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [checkingPermission, setCheckingPermission] = useState(false);
   const [linkError, setLinkError] = useState(false);
   const bottomPadding = Math.max(40, insets.bottom + 14);
   const buttonHeight = 14 + 54 + bottomPadding;
-  const collapsedHeight = 35 + titleHeight + 10 + buttonHeight;
+  const measuredBodyHeight = bodyHeight ?? 214;
+  const measuredTitleHeight = titleHeight ?? 33;
+  const collapsedHeight = 35 + measuredTitleHeight + 10 + buttonHeight;
   const expandedHeight = Math.max(collapsedHeight, Math.min(
-    collapsedHeight + bodyHeight + 20, screenHeight - insets.top - 120,
+    collapsedHeight + measuredBodyHeight + 20, screenHeight - insets.top - 120,
   ));
   const { height, headerPanHandlers, bodyGesture, nativeScrollGesture, onScroll } = useTourSheet({
     expanded, collapsedHeight, expandedHeight, onExpandedChange,
@@ -41,7 +48,13 @@ export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, 
   const photoSlots = Array.from({ length: 4 }, (_, index) => photos[index] ?? '');
   const address = attraction.address.trim() || '-';
   const phone = attraction.phone?.trim() || '';
-  const homepage = attraction.homepage?.trim() || '';
+  const homepageUrl = normalizeHomepageUrl(attraction.homepage);
+
+  useEffect(() => {
+    if (bodyHeight === null || titleHeight === null) return;
+    onHeightChange?.(expanded ? expandedHeight : collapsedHeight);
+  }, [bodyHeight, collapsedHeight, expanded, expandedHeight, onHeightChange, titleHeight]);
+
   const openLink = async (url: string) => {
     try { await Linking.openURL(url); } catch { setLinkError(true); }
   };
@@ -74,13 +87,15 @@ export function TourDetailBottomSheet({ attraction, expanded, visited, onClose, 
             <InfoRow icon="space" text={address} />
             <InfoRow icon="call" text={phone || '-'}
               onPress={phone ? () => openLink(`tel:${phone}`) : undefined} />
-            <InfoRow icon="page" text={homepage ? '홈페이지 바로가기' : '-'} isLink={!!homepage}
-              onPress={homepage ? () => openLink(homepage) : undefined} />
+            <InfoRow icon="page" text={homepageUrl ? '홈페이지 바로가기' : '-'}
+              isLink={!!homepageUrl}
+              onPress={homepageUrl ? () => openLink(homepageUrl) : undefined} />
           </View>
         </View>
       </ScrollView></GestureDetector></View></GestureDetector>
       <View style={[styles.buttonArea, { paddingBottom: bottomPadding }]}>
         <DojangTourButton status={visited ? 'alreadyVisited' : 'visitAndStamp'}
+          loading={checkingPermission}
           onPress={checkingPermission || visited ? undefined : async () => {
             setCheckingPermission(true);
             try { if (await onRequestVisit()) setConfirmVisible(true); }
@@ -105,7 +120,6 @@ function InfoRow({ icon, text, isLink, onPress }: {
   return onPress ? <Pressable accessibilityRole="link" onPress={onPress}>{row}</Pressable> : row;
 }
 
-export const TOUR_DETAIL_SHEET_HEIGHT = { collapsed: COLLAPSED_HEIGHT } as const;
 const styles = StyleSheet.create({
   sheet: { position: 'absolute', right: 0, bottom: 0, left: 0, overflow: 'hidden',
     borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: Colors.gray.gray00,

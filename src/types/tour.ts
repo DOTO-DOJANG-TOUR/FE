@@ -15,6 +15,7 @@ export type TourSpotDetail = TourContent & {
   imageList: string[];
   legalDongSigunguCode: string;
   phone?: string;
+  homepage?: string;
   apiModifiedAt: string;
 };
 
@@ -38,7 +39,8 @@ export type TourAttraction = {
   category: TourCategory;
   imageUrls: string[];
   phone?: string;
-  // TourSpotDetailResponseDTO에 웹사이트 필드가 없어 항상 비어 있을 수 있음(축제와 달리 관광지엔 homepageUrl 없음).
+  // 관광지 상세 조회(TourSpotDetailResponseDTO)에만 내려온다. 목록 조회엔 없어 그 경로로 만든
+  // TourAttraction(TourMainPage)엔 항상 비어 있고, 상세 조회 경로(TourVisitPage)에서만 채워진다.
   homepage?: string;
   visited?: boolean;
 };

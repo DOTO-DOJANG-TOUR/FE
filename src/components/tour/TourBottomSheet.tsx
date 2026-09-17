@@ -1,20 +1,20 @@
 import { CategoryBadge } from '@/components/common/CategoryBadge';
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 import { REQUIRED_STAMP_COUNT, TourColors, TourTypography } from '@/constants/tourTheme';
+import { useTourMainSheet } from '@/hooks/use-tour-main-sheet';
 import type { TourAttraction, TourFilterCategory } from '@/types/tour';
-import { useEffect, useState } from 'react';
-import { useTourSheet } from '@/hooks/use-tour-sheet';
+import { useState } from 'react';
 import { TourAsset } from './TourAsset';
 import { GestureDetector } from 'react-native-gesture-handler';
 import {
-  Animated,
+  FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from 'react-native';
+import Animated, { type SharedValue } from 'react-native-reanimated';
 import { TourAttractionCard } from './TourAttractionCard';
 import { TourStampIcon } from './TourIcons';
 
@@ -22,7 +22,7 @@ type Props = {
   expanded: boolean;
   title: string;
   stampCount: number | null;
-  onHeightChange?: (height: number) => void;
+  sharedHeight: SharedValue<number>;
   selectedCategory: TourFilterCategory;
   attractions: TourAttraction[];
   onExpandedChange: (expanded: boolean) => void;
@@ -49,90 +49,96 @@ export function TourBottomSheet({
   onExpandedChange,
   onCategoryChange,
   onAttractionPress,
-  onHeightChange,
+  sharedHeight,
 }: Props) {
   const { height: screenHeight } = useWindowDimensions();
   const [headerHeight, setHeaderHeight] = useState(COLLAPSED_HEIGHT - 45);
   const collapsedHeight = Math.max(COLLAPSED_HEIGHT, headerHeight + 45);
   const expandedHeight = Math.max(collapsedHeight, Math.min(EXPANDED_HEIGHT, screenHeight - 180));
-  const { height, headerPanHandlers, bodyGesture, nativeScrollGesture, onScroll } = useTourSheet({
-    expanded, collapsedHeight, expandedHeight, onExpandedChange,
+  const {
+    animatedStyle,
+    headerGesture,
+    bodyGesture,
+    nativeScrollGesture,
+    onScroll,
+  } = useTourMainSheet({
+    expanded, collapsedHeight, expandedHeight, onExpandedChange, sharedHeight,
   });
 
-  // 애니메이션 중 onLayout 높이를 매 프레임 부모로 올리면 지도 위 버튼까지 계속 재배치된다.
-  // 시트가 향하는 스냅 높이만 알려서 지도와 시트가 서로의 레이아웃을 흔들지 않게 한다.
-  useEffect(() => {
-    onHeightChange?.(expanded ? expandedHeight : collapsedHeight);
-  }, [expanded, collapsedHeight, expandedHeight, onHeightChange]);
-
   return (
-    <Animated.View style={[styles.sheet, { height }]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={expanded ? '관광지 목록 최소화' : '관광지 목록 최대화'}
-        style={styles.handleArea}
-        onPress={() => onExpandedChange(!expanded)}
-        {...headerPanHandlers}
-      >
-        <View style={styles.handle} />
-      </Pressable>
+    <Animated.View style={[styles.sheet, animatedStyle]}>
+      <GestureDetector gesture={headerGesture}>
+        <View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={expanded ? '관광지 목록 최소화' : '관광지 목록 최대화'}
+            style={styles.handleArea}
+            onPress={() => onExpandedChange(!expanded)}
+          >
+            <View style={styles.handle} />
+          </Pressable>
 
-      <View style={styles.header} {...headerPanHandlers}
-        onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}>
-        <View style={styles.titleGroup}>
-        <View style={styles.stampBadge}>
-          <TourStampIcon />
-          <Text style={styles.stampText}>{stampCount === null ? '—' : stampCount}/{REQUIRED_STAMP_COUNT}</Text>
-        </View>
-        <Text numberOfLines={2} style={styles.title}>
-          {title}
-        </Text>
-        </View>
-        <ScrollView
-          style={styles.filters}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryRow}
-        >
-          {categories.map((category) => (
-            <CategoryBadge
-              key={category}
-              category={category}
-              selected={selectedCategory === category}
-              onPress={() => onCategoryChange(category)}
-            />
-          ))}
-        </ScrollView>
-      </View>
-
-      {(
-        <GestureDetector gesture={bodyGesture}><View style={styles.listArea}>
-          {attractions.length > 0 ? (
-            <GestureDetector gesture={nativeScrollGesture}><ScrollView
-              showsVerticalScrollIndicator={false}
-              onScroll={onScroll}
-              scrollEventThrottle={16}
-              bounces={false}
-              nestedScrollEnabled
-              contentContainerStyle={styles.listContent}
-            >
-              {attractions.map((attraction) => (
-                <TourAttractionCard
-                  key={attraction.id}
-                  attraction={attraction}
-                  showCategory={selectedCategory === 'menu'}
-                  onPress={() => onAttractionPress(attraction)}
+          <View
+            style={styles.header}
+            onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
+          >
+            <View style={styles.titleGroup}>
+              <View style={styles.stampBadge}>
+                <TourStampIcon />
+                <Text style={styles.stampText}>{stampCount === null ? '—' : stampCount}/{REQUIRED_STAMP_COUNT}</Text>
+              </View>
+              <Text numberOfLines={2} style={styles.title}>
+                {title}
+              </Text>
+            </View>
+            <View style={styles.categoryRow}>
+              {categories.map((category) => (
+                <CategoryBadge
+                  key={category}
+                  category={category}
+                  selected={selectedCategory === category}
+                  onPress={() => onCategoryChange(category)}
+                  style={styles.categoryBadge}
                 />
               ))}
-            </ScrollView></GestureDetector>
+            </View>
+          </View>
+        </View>
+      </GestureDetector>
+
+      <GestureDetector gesture={bodyGesture}>
+        <View style={styles.listArea}>
+          {attractions.length > 0 ? (
+            // 관광지 수가 많으면(이미지 포함) ScrollView는 전부 한 번에 마운트되어 시트
+            // 높이 변경과 겹칠 때 버벅였다 — FlatList로 화면에 보이는 항목만 렌더링한다.
+            <GestureDetector gesture={nativeScrollGesture}>
+              <FlatList
+                data={attractions}
+                keyExtractor={(attraction) => attraction.id}
+                showsVerticalScrollIndicator={false}
+                onScroll={onScroll}
+                scrollEventThrottle={16}
+                scrollEnabled={expanded}
+                bounces={false}
+                nestedScrollEnabled
+                contentContainerStyle={styles.listContent}
+                renderItem={({ item: attraction }) => (
+                  <TourAttractionCard
+                    attraction={attraction}
+                    showCategory={selectedCategory === 'menu'}
+                    onPress={() => onAttractionPress(attraction)}
+                  />
+                )}
+              />
+            </GestureDetector>
           ) : (
             <View style={styles.emptyContainer}>
               <TourAsset name="empty" />
               <Text style={styles.emptyText}>이 항목에 해당하는 관광지가 없어요.</Text>
             </View>
           )}
-        </View></GestureDetector>
-      )}
+        </View>
+      </GestureDetector>
     </Animated.View>
   );
 }
@@ -168,7 +174,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gray.gray30,
   },
   titleGroup: { gap: 8 },
-  filters: { height: 34, flexGrow: 0 },
   header: {
     gap: 18,
     paddingHorizontal: 20,
@@ -196,7 +201,13 @@ const styles = StyleSheet.create({
     includeFontPadding: false, fontFamily: FontFamily.semiBold,
   },
   categoryRow: {
+    height: 34,
+    flexDirection: 'row',
     gap: 7,
+  },
+  categoryBadge: {
+    width: 'auto',
+    flex: 1,
   },
   listArea: {
     flex: 1,

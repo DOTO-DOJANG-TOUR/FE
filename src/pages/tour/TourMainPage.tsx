@@ -9,19 +9,18 @@ import type { LocationProblem } from '@/utils/locationPolicy';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { LoadingIndicator } from '@/components/common/LoadingIndicator';
 import { TOUR_SHEET_HEIGHT, TourBottomSheet } from '@/components/tour/TourBottomSheet';
-import { MarkerGroupPicker, type MarkerGroupOption } from '@/components/tour/MarkerGroupPicker';
 import { TourMap, type TourMapHandle, type TourMapMarker } from '@/components/tour/TourMap';
-import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
+import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { mapTourCategory } from '@/constants/tourCategory';
-import { TourColors } from '@/constants/tourTheme';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useDelayedLoading } from '@/hooks/use-delayed-loading';
 import type { StampTourDetail, TourAttraction, TourFilterCategory } from '@/types/tour';
-import { groupByCoordinate, parseDistanceMeters, selectNearbySpots, type GeoPoint } from '@/utils/geo';
+import { declutterCoordinates, parseDistanceMeters, selectNearbySpots, type GeoPoint } from '@/utils/geo';
 import { getCachedTourSpot, setCachedTourSpot } from '@/utils/tourSpotCache';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 
 type AttractionWithPoint = { attraction: TourAttraction; point: GeoPoint };
 
@@ -40,7 +39,8 @@ export default function TourMainPage() {
     isOffline: boolean;
   } | null>(null);
   const [locationProblem, setLocationProblem] = useState<LocationProblem | null>(null);
-  const [sheetHeight, setSheetHeight] = useState<number>(TOUR_SHEET_HEIGHT.collapsed);
+  const [isLocationButtonLoading, setIsLocationButtonLoading] = useState(false);
+  const sheetHeight = useSharedValue<number>(TOUR_SHEET_HEIGHT.collapsed);
   const [stampCountFresh, setStampCountFresh] = useState(false);
   const locationRequestRef = useRef(false);
   // 진행 중인 스탬프 투어가 바뀌면(예: 투어 중단 후 다른 투어 시작) festivalId도 바뀌는데,
@@ -51,7 +51,6 @@ export default function TourMainPage() {
     festivalId: string;
     point: GeoPoint;
   } | null>(null);
-  const [groupPickerOptions, setGroupPickerOptions] = useState<MarkerGroupOption[] | null>(null);
   const [navigatingAttractionId, setNavigatingAttractionId] = useState<string | null>(null);
 
   // 탭 재진입마다 다시 조회하는데(useFocusEffect), 응답이 빨리 오면 스피너를 아예 안 띄워서
@@ -111,6 +110,22 @@ export default function TourMainPage() {
   }, []);
 
   const festivalId = stampTour?.festivalId;
+
+  // 지도 SDK 준비 여부 — 바텀시트/검색바 등 나머지 UI도 이 시점까지 같이 가려서
+  // 컴포넌트 단위가 아니라 페이지 전체가 한 번에 로딩되도록 한다.
+  const [mapReady, setMapReady] = useState(false);
+  const [mapLoadError, setMapLoadError] = useState(false);
+  const showMapLoadingIndicator = useDelayedLoading(!mapReady && !mapLoadError);
+
+  // 투어가 바뀌면(중단 후 다른 투어 시작 등) TourMap이 새로 마운트되어 다시 로딩되므로 같이
+  // 초기화한다(React 공식 "Adjusting state on prop change" 패턴 — useEffect로 하면
+  // set-state-in-effect 린트에 걸리고 한 프레임 늦게 반영된다).
+  const [prevFestivalId, setPrevFestivalId] = useState(festivalId);
+  if (festivalId !== prevFestivalId) {
+    setPrevFestivalId(festivalId);
+    setMapReady(false);
+    setMapLoadError(false);
+  }
 
   // 축제 좌표(mapX/mapY) API가 없어서(docs/OPEN_QUESTIONS.md "C" 참고), 축제 상세의 address를
   // 카카오 로컬 API로 좌표 변환해 초기 지도 중심 보정에 쓴다. 실패해도 관광지 bounds로 대체되므로
@@ -181,15 +196,15 @@ export default function TourMainPage() {
 
   const attractions = useMemo(() => filteredItems.map((item) => item.attraction), [filteredItems]);
 
-  // 좌표가 같은(주소가 같은) 관광지가 여러 개면 마커 하나에 아이콘을 나란히 묶어서 보여준다(#37).
+  // 좌표가 같은(주소가 같은) 관광지가 여러 개여도 마커는 하나로 합치지 않고 각자 유지하되,
+  // 겹쳐 보이지 않도록 declutterCoordinates가 서로 살짝 밀어내 배치한다(#37, PM 요청으로 방향 전환).
   const markers = useMemo<TourMapMarker[]>(
     () =>
-      groupByCoordinate(filteredItems, (item) => item.point).map((group) => ({
-        id: group.items[0].attraction.id,
-        memberIds: group.items.map((item) => item.attraction.id),
-        categories: group.items.map((item) => item.attraction.category),
-        lat: group.lat,
-        lng: group.lng,
+      declutterCoordinates(filteredItems, (item) => item.point).map((item) => ({
+        id: item.attraction.id,
+        categories: [item.attraction.category],
+        lat: item.point.lat,
+        lng: item.point.lng,
       })),
     [filteredItems],
   );
@@ -232,41 +247,22 @@ export default function TourMainPage() {
   };
 
   const handleMarkerPress = (markerId: string) => {
-    const group = markers.find((marker) => marker.id === markerId);
-    if (!group) return;
-
-    if (group.memberIds.length <= 1) {
-      goToAttraction(markerId);
-      return;
-    }
-
-    // 좌표가 겹쳐 마커 하나로 합쳐진 경우 어디로 갈지 고르게 한다(#37).
-    const options = group.memberIds
-      .map((id) => attractionsWithPoint.find((item) => item.attraction.id === id)?.attraction)
-      .filter((attraction): attraction is TourAttraction => !!attraction)
-      .map((attraction) => ({
-        id: attraction.id,
-        title: attraction.title,
-        category: attraction.category,
-      }));
-
-    setGroupPickerOptions(options);
-  };
-
-  const handleGroupPickerSelect = (attractionId: string) => {
-    setGroupPickerOptions(null);
-    goToAttraction(attractionId);
+    goToAttraction(markerId);
   };
 
   const handleLocationPress = async () => {
     if (locationRequestRef.current) return;
     locationRequestRef.current = true;
+    setIsLocationButtonLoading(true);
     setLocationProblem(null);
     try {
       const result = await requestLocation();
       if (result.coords) mapRef.current?.focusOnCurrentLocation(result.coords.lat, result.coords.lng);
       else setLocationProblem(result.problem);
-    } finally { locationRequestRef.current = false; }
+    } finally {
+      locationRequestRef.current = false;
+      setIsLocationButtonLoading(false);
+    }
   };
 
   if (empty === '1' || (!isLoading && !stampTour && !failedRequest)) {
@@ -292,19 +288,21 @@ export default function TourMainPage() {
             ref={mapRef}
             markers={markers}
             currentLocation={userLocation}
-            locationBottom={
-              sheetHeight + 20
-            }
+            locationBottomSharedValue={sheetHeight}
+            locationBottomOffset={20}
             onSearchPress={() => router.push({ pathname: '/search/tour', params: { festivalId } })}
             onLocationPress={handleLocationPress}
             onMarkerPress={handleMarkerPress}
+            onReady={() => setMapReady(true)}
+            onLoadError={() => setMapLoadError(true)}
+            isLocationLoading={isLocationButtonLoading}
           />
 
           <TourBottomSheet
             expanded={expanded}
             title={stampTour.title}
             stampCount={stampCountFresh ? stampTour.stampCount : null}
-            onHeightChange={setSheetHeight}
+            sharedHeight={sheetHeight}
             selectedCategory={selectedCategory}
             attractions={attractions}
             onExpandedChange={setExpanded}
@@ -314,12 +312,22 @@ export default function TourMainPage() {
             }}
             onAttractionPress={handleAttractionPress}
           />
+
+          {/* 지도 SDK가 뜰 때까지 바텀시트·검색바까지 같이 가려서 컴포넌트 단위가 아닌
+              페이지 단위 로딩으로 보이게 한다. 에러가 나면 TourMap 자체의 재시도 UI로 넘긴다. */}
+          {!mapReady && !mapLoadError && (
+            <View style={[StyleSheet.absoluteFill, styles.loadingContainer, styles.pageLoadingOverlay]}>
+              {showMapLoadingIndicator && <LoadingIndicator />}
+            </View>
+          )}
         </>
       )}
 
+      {/* 관광지 상세로 이동하기 전 데이터를 미리 받아두는 동안(#37) — 화면은 그대로 두되
+          작은 배지 대신 페이지 전체를 덮어서, 오래 걸릴 때 멈춘 것처럼 보이지 않게 한다. */}
       {showNavigatingIndicator && (
-        <View pointerEvents="none" style={styles.navigatingBadge}>
-          <ActivityIndicator size="small" color={Colors.pink.pink50} />
+        <View style={[StyleSheet.absoluteFill, styles.loadingContainer, styles.pageLoadingOverlay]}>
+          <LoadingIndicator />
         </View>
       )}
 
@@ -340,13 +348,6 @@ export default function TourMainPage() {
       />
 
       <LocationProblemModal problem={locationProblem} purpose="map" onClose={() => setLocationProblem(null)} />
-
-      <MarkerGroupPicker
-        visible={groupPickerOptions !== null}
-        options={groupPickerOptions ?? []}
-        onSelect={handleGroupPickerSelect}
-        onClose={() => setGroupPickerOptions(null)}
-      />
     </View>
   );
 }
@@ -362,17 +363,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navigatingBadge: {
-    position: 'absolute',
-    top: 106,
-    alignSelf: 'center',
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: Radius.full,
-    backgroundColor: Colors.gray.gray00,
-    boxShadow: TourColors.locationShadow,
+  pageLoadingOverlay: {
+    backgroundColor: Colors.gray.gray20,
   },
   noTourContainer: {
     flex: 1,

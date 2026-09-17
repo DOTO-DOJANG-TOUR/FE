@@ -211,17 +211,41 @@ export function getKakaoMapHtml(javascriptKey: string): string {
       panAnimationId = requestAnimationFrame(step);
     }
 
-    function setCenter(lat, lng, level, animate) {
-      if (animate === false) {
-        map.setCenter(new kakao.maps.LatLng(lat, lng));
-        if (typeof level === 'number') map.setLevel(level);
-        return;
-      }
+    function getViewportAdjustedCenter(lat, lng, bottomInset, markerOffsetY) {
+      var target = new kakao.maps.LatLng(lat, lng);
+      if (!(bottomInset > 0) && !markerOffsetY) return target;
 
+      // 선택 마커를 전체 WebView 중앙이 아니라 바텀시트를 제외한 지도 영역의 중앙에 둔다.
+      // 위·경도에 임의 값을 더하지 않고 카카오맵의 레이어 좌표 변환을 사용하므로 줌과 기기
+      // 크기가 달라져도 같은 화면 위치에 정렬된다. markerOffsetY가 양수면 가시 영역의
+      // 정중앙보다 마커를 그만큼 아래에 표시한다.
+      var projection = map.getProjection();
+      var targetPoint = projection.pointFromCoords(target);
+      var adjustedCenterPoint = new kakao.maps.Point(
+        targetPoint.x,
+        targetPoint.y + bottomInset / 2 - (markerOffsetY || 0),
+      );
+
+      return projection.coordsFromPoint(adjustedCenterPoint);
+    }
+
+    function setCenter(lat, lng, level, animate, bottomInset, markerOffsetY) {
       if (typeof level === 'number' && level !== map.getLevel()) {
         map.setLevel(level);
       }
-      animateCenter(lat, lng, 400);
+
+      var adjustedCenter = getViewportAdjustedCenter(
+        lat,
+        lng,
+        bottomInset || 0,
+        markerOffsetY || 0,
+      );
+      if (animate === false) {
+        map.setCenter(adjustedCenter);
+        return;
+      }
+
+      animateCenter(adjustedCenter.getLat(), adjustedCenter.getLng(), 400);
     }
 
     function fitBounds(points) {

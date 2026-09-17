@@ -19,9 +19,9 @@ import { getRecentLocationSnapshot, useCurrentLocation } from '@/hooks/use-curre
 import { useTourVisitStore } from '@/stores/tourVisitStore';
 import type { TourSpotDetail } from '@/types/tour';
 import { getCachedTourSpot } from '@/utils/tourSpotCache';
-import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const MAX_VISIT_DURATION_MS = 7 * 60 * 60 * 1000;
@@ -86,6 +86,26 @@ export default function TourCheckInPage() {
     completeVisit();
     router.replace({ pathname: '/stamp-detail/[id]', params: { id: festivalId } });
   };
+
+  // 방문 시작 직후 이 화면은 라우팅 가드가 스택에서 이전 화면(visit)을 빼버리므로, 기본
+  // 뒤로가기(pop)를 그대로 두면 이미 낡은 화면으로 튕겨 서버 상태와 어긋난다(방문 세션이
+  // 여전히 진행 중이라 "요청이 현재 상태와 충돌합니다" 에러로 이어짐). 그래서 하드웨어
+  // 뒤로가기를 직접 처리한다: 완료 상태면 투어 탭으로, 아니면(진행 중) 바로 앱을 종료한다.
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (completed) {
+          handleCompletedClose();
+        } else {
+          BackHandler.exitApp();
+        }
+        return true;
+      });
+
+      return () => subscription.remove();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [completed, festivalId]),
+  );
 
   // 서버가 내려준 expiresAt 기준으로 매초 다시 계산한다(로컬에서 7시간을 새로 세지 않음).
   useEffect(() => {
@@ -303,6 +323,7 @@ export default function TourCheckInPage() {
       >
         <DojangTourButton
           status="arrived"
+          loading={submitting}
           onPress={submitting ? undefined : handleArrival}
         />
       </View>

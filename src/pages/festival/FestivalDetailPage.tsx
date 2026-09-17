@@ -34,6 +34,9 @@ export default function FestivalDetailPage({
     const [pageLoading, setPageLoading] = useState(true);
     const [failedImageUri, setFailedImageUri] = useState<string | undefined>();
     const [isStopModalVisible, setIsStopModalVisible] = useState(false);
+    // 투어 시작 API 응답을 기다리는 동안(+탭 이동 전까지) 화면이 멈춘 것처럼 보이지 않도록
+    // 페이지 전체를 로딩으로 덮는다.
+    const [isStartingTour, setIsStartingTour] = useState(false);
     const {
         requestLocation,
     } = useCurrentLocation();
@@ -231,37 +234,43 @@ export default function FestivalDetailPage({
     };
 
     const handleStartTour = async () => {
-        try {
-            await startStampTour(festivalId);
-        } catch (error) {
-            console.error(
-                '스탬프 투어 시작 실패:',
-                error
-            );
+        setIsStartingTour(true);
 
-            if (isRetryableError(error)) {
-                setFailedRequest({
-                    retry: handleStartTour,
-                    isOffline:
-                        error instanceof NetworkOfflineError,
-                });
-            } else {
-                setInfoError(
-                    error instanceof ApiError
-                        ? error.message
-                        : '스탬프 투어를 시작하지 못했어요.',
+        try {
+            try {
+                await startStampTour(festivalId);
+            } catch (error) {
+                console.error(
+                    '스탬프 투어 시작 실패:',
+                    error
                 );
+
+                if (isRetryableError(error)) {
+                    setFailedRequest({
+                        retry: handleStartTour,
+                        isOffline:
+                            error instanceof NetworkOfflineError,
+                    });
+                } else {
+                    setInfoError(
+                        error instanceof ApiError
+                            ? error.message
+                            : '스탬프 투어를 시작하지 못했어요.',
+                    );
+                }
+
+                return;
             }
 
-            return;
+            // 투어 시작은 이미 서버에 반영됐으므로, 이후 상태 재조회가 실패하더라도 이동은
+            // 그대로 진행한다. GET /api/v1/stamp-tour가 festivalId 없이도 현재 진행 중인
+            // 투어를 내려주므로 파라미터 없이 이동해도 Tour 탭이 알아서 다시 조회한다.
+            router.push('/(tabs)/tour');
+
+            await refreshDojangStatus();
+        } finally {
+            setIsStartingTour(false);
         }
-
-        // 투어 시작은 이미 서버에 반영됐으므로, 이후 상태 재조회가 실패하더라도 이동은
-        // 그대로 진행한다. GET /api/v1/stamp-tour가 festivalId 없이도 현재 진행 중인
-        // 투어를 내려주므로 파라미터 없이 이동해도 Tour 탭이 알아서 다시 조회한다.
-        router.push('/(tabs)/tour');
-
-        await refreshDojangStatus();
     };
 
     const handleDojangButtonPress = async () => {
@@ -479,6 +488,12 @@ export default function FestivalDetailPage({
                     />
                 )}
             </View>
+
+            {isStartingTour && (
+                <View style={[StyleSheet.absoluteFill, styles.loadingContainer, styles.white]}>
+                    <PageLoadingIndicator />
+                </View>
+            )}
 
             <AlertModal
                 visible={isStopModalVisible}

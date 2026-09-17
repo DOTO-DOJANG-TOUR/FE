@@ -6,32 +6,28 @@ import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import type { LocationProblem } from '@/utils/locationPolicy';
 import { ErrorModal } from '@/components/common/ErrorModal';
-import { MarkerGroupPicker, type MarkerGroupOption } from '@/components/tour/MarkerGroupPicker';
-import {
-  TOUR_DETAIL_SHEET_HEIGHT,
-  TourDetailBottomSheet,
-} from '@/components/tour/TourDetailBottomSheet';
+import { TourDetailBottomSheet } from '@/components/tour/TourDetailBottomSheet';
 import { TourMap, type TourMapHandle, type TourMapMarker } from '@/components/tour/TourMap';
 import { Colors } from '@/constants/theme';
 import { mapTourCategory } from '@/constants/tourCategory';
 import { useDelayedLoading } from '@/hooks/use-delayed-loading';
 import { useTourVisitStore } from '@/stores/tourVisitStore';
 import type { TourAttraction, TourCategory, TourContent, TourSpotDetail } from '@/types/tour';
-import { groupByCoordinate, type GeoPoint } from '@/utils/geo';
+import { declutterCoordinates, type GeoPoint } from '@/utils/geo';
 import { getCachedTourSpot, setCachedTourSpot } from '@/utils/tourSpotCache';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 const DUPLICATE_VISIT_ERROR_CODES = new Set([
   'STAMP-TOUR-409-002',
   'TOUR-SPOT-VISIT-409-001',
   'STAMP-409-001',
 ]);
+const EXPANDED_MARKER_OFFSET_Y = 36;
 
 export default function TourVisitPage() {
   const router = useRouter();
-  const { height: screenHeight } = useWindowDimensions();
   const { attractionId, festivalId, visited: visitedParam } = useLocalSearchParams<{
     attractionId?: string;
     festivalId?: string;
@@ -48,6 +44,7 @@ export default function TourVisitPage() {
   const initialCached =
     festivalId && attractionId ? getCachedTourSpot(festivalId, attractionId) : undefined;
   const [detail, setDetail] = useState<TourSpotDetail | null>(initialCached?.detail ?? null);
+  const detailRef = useRef<TourSpotDetail | null>(detail);
   const [spots, setSpots] = useState<TourContent[]>(initialCached?.spots ?? []);
   const [isLoading, setIsLoading] = useState(
     () => !!festivalId && !!attractionId && !initialCached,
@@ -57,13 +54,21 @@ export default function TourVisitPage() {
     retry: () => void;
     isOffline: boolean;
   } | null>(null);
-  const [groupPickerOptions, setGroupPickerOptions] = useState<MarkerGroupOption[] | null>(null);
   const [retryVisible, setRetryVisible] = useState(false);
   const [duplicateVisitMessage, setDuplicateVisitMessage] = useState<string | null>(null);
+  const [detailSheetHeight, setDetailSheetHeight] = useState<number | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapLoadError, setMapLoadError] = useState(false);
 
   const mapRef = useRef<TourMapHandle>(null);
+  const lastFocusedLayoutRef = useRef<string | null>(null);
   // 응답이 빨리 오면 스피너를 아예 안 띄워서 화면 전환이 반짝이지 않게 한다.
   const showLoadingIndicator = useDelayedLoading(isLoading);
+  const showMapLoadingIndicator = useDelayedLoading(!mapReady && !mapLoadError);
+
+  useEffect(() => {
+    detailRef.current = detail;
+  }, [detail]);
 
   // 지도에서 다른 마커를 눌러 attractionId가 바뀌면(같은 화면 인스턴스가 재사용됨) 이전 관광지의
   // visited/expanded 상태가 남아있지 않도록 렌더 중에 리셋한다(React 공식 "Adjusting state on prop
@@ -87,14 +92,14 @@ export default function TourVisitPage() {
 
   useEffect(() => {
     if (!festivalId || !attractionId) return;
-    // detail이 이미 이 attractionId 것이면(프리페치·캐시로 위에서 채워짐) 다시 받아올 필요 없다.
-    if (detail?.tourSpotId === attractionId) return;
 
     let isMounted = true;
 
     const fetchData = async () => {
       try {
-        setIsLoading(true);
+        // 캐시가 있으면 기존 상세를 즉시 보여주고, 로딩 화면 없이 최신 필드를 백그라운드에서
+        // 갱신한다. 캐시가 없거나 다른 관광지 데이터만 남아 있을 때만 전체 로딩을 표시한다.
+        if (detailRef.current?.tourSpotId !== attractionId) setIsLoading(true);
         const [spotDetail, allSpots] = await Promise.all([
           getTourSpotDetail(festivalId, attractionId),
           getTourSpots(festivalId),
@@ -113,8 +118,9 @@ export default function TourVisitPage() {
           // 전환 실패 시 이전 관광지 내용을 그대로 유지하면 URL·선택 마커는 새 관광지를
           // 가리키는데 상세 시트는 이전 관광지를 보여주는 상태가 된다 — 이전 관광지로
           // 되돌려서 화면 전체가 다시 일치하게 한다.
-          if (detail && detail.tourSpotId !== attractionId) {
-            router.setParams({ attractionId: detail.tourSpotId });
+          const visibleDetail = detailRef.current;
+          if (visibleDetail && visibleDetail.tourSpotId !== attractionId) {
+            router.setParams({ attractionId: visibleDetail.tourSpotId });
           }
           if (isRetryableError(error)) {
             setFailedRequest({
@@ -133,7 +139,7 @@ export default function TourVisitPage() {
     return () => {
       isMounted = false;
     };
-  }, [festivalId, attractionId, reloadTrigger, detail, router]);
+  }, [festivalId, attractionId, reloadTrigger, router]);
 
   const attraction = useMemo<TourAttraction | null>(() => {
     if (!detail) return null;
@@ -150,10 +156,12 @@ export default function TourVisitPage() {
       distance: '',
       imageUrls: detail.imageList.length ? detail.imageList : detail.imageUrl ? [detail.imageUrl] : [],
       phone: detail.phone?.trim() || undefined,
+      homepage: detail.homepage?.trim() || undefined,
     };
   }, [detail]);
 
-  // 좌표가 같은(주소가 같은) 관광지가 여러 개면 마커 하나에 아이콘을 나란히 묶어서 보여준다(#37).
+  // 좌표가 같은(주소가 같은) 관광지가 여러 개여도 마커는 하나로 합치지 않고 각자 유지하되,
+  // 겹쳐 보이지 않도록 declutterCoordinates가 서로 살짝 밀어내 배치한다(#37, PM 요청으로 방향 전환).
   const markers = useMemo<TourMapMarker[]>(() => {
     const validSpots = spots
       .map((spot) => {
@@ -169,31 +177,38 @@ export default function TourVisitPage() {
         (item): item is { id: string; category: TourCategory; point: GeoPoint } => item !== null,
       );
 
-    return groupByCoordinate(validSpots, (item) => item.point).map((group) => ({
-      id: group.items[0].id,
-      memberIds: group.items.map((item) => item.id),
-      categories: group.items.map((item) => item.category),
-      lat: group.lat,
-      lng: group.lng,
+    return declutterCoordinates(validSpots, (item) => item.point).map((item) => ({
+      id: item.id,
+      categories: [item.category],
+      lat: item.point.lat,
+      lng: item.point.lng,
     }));
   }, [spots]);
 
-  // 화면에 처음 들어왔을 때만(애니메이션 없이) 선택된 관광지 위치에 자리 잡는다. 이미 들어와 있는
-  // 상태에서 다른 마커를 눌렀을 때의 부드러운 이동은 navigateToAttraction이 클릭 즉시 처리하므로,
-  // 여기서 또 움직이면 안 된다(한 번만 실행되도록 ref로 막음, #37).
-  const hasFocusedInitiallyRef = useRef(false);
+  // 최초 진입과 시트 스냅 높이 변경 시 선택 마커를 실제로 보이는 지도 영역의 중앙에 둔다.
+  // 다른 마커 선택은 navigateToAttraction이 먼저 처리하며, focusKey로 데이터 도착 후 중복 이동을 막는다.
   useEffect(() => {
-    if (!detail || hasFocusedInitiallyRef.current) return;
+    if (!detail || detail.tourSpotId !== attractionId || detailSheetHeight === null) return;
 
     const lat = Number(detail.mapY);
     const lng = Number(detail.mapX);
     if (!detail.mapY.trim() || !detail.mapX.trim() ||
       !Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-    hasFocusedInitiallyRef.current = true;
-    // 권장 줌 레벨 3, 애니메이션 없이 즉시 배치(#37).
-    mapRef.current?.focusOnMarker(lat, lng, undefined, false);
-  }, [detail]);
+    const focusKey = expanded
+      ? `${detail.tourSpotId}:expanded:${detailSheetHeight}`
+      : `${detail.tourSpotId}:collapsed`;
+    if (lastFocusedLayoutRef.current === focusKey) return;
+
+    // 펼친 상태에서는 시트를 제외한 지도 영역의 중앙보다 살짝 아래에 두고, 접힌 상태에서는
+    // 기존 동작처럼 전체 지도 화면의 정중앙에 둔다.
+    mapRef.current?.focusOnMarker(lat, lng, {
+      animate: lastFocusedLayoutRef.current !== null,
+      bottomInset: expanded ? detailSheetHeight : 0,
+      markerOffsetY: expanded ? EXPANDED_MARKER_OFFSET_Y : 0,
+    });
+    lastFocusedLayoutRef.current = focusKey;
+  }, [attractionId, detail, detailSheetHeight, expanded]);
 
   const navigateToAttraction = (targetId: string) => {
     if (targetId === attractionId) return;
@@ -205,7 +220,13 @@ export default function TourVisitPage() {
     const lat = target ? Number(target.mapY) : NaN;
     const lng = target ? Number(target.mapX) : NaN;
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      mapRef.current?.focusOnMarker(lat, lng);
+      mapRef.current?.focusOnMarker(lat, lng, {
+        bottomInset: expanded ? (detailSheetHeight ?? 0) : 0,
+        markerOffsetY: expanded ? EXPANDED_MARKER_OFFSET_Y : 0,
+      });
+      lastFocusedLayoutRef.current = expanded
+        ? `${targetId}:expanded:${detailSheetHeight ?? 0}`
+        : `${targetId}:collapsed`;
     }
 
     // push/replace 둘 다 화면(과 그 안의 지도 WebView)을 통째로 재마운트시켜서 전환마다
@@ -215,31 +236,7 @@ export default function TourVisitPage() {
   };
 
   const handleMarkerPress = (markerId: string) => {
-    const group = markers.find((marker) => marker.id === markerId);
-    if (!group) return;
-
-    if (group.memberIds.length <= 1) {
-      navigateToAttraction(markerId);
-      return;
-    }
-
-    // 좌표가 겹쳐 마커 하나로 합쳐진 경우 어디로 갈지 고르게 한다(#37).
-    const options = group.memberIds
-      .map((id) => {
-        const spot = spots.find((item) => item.tourSpotId === id);
-        if (!spot) return null;
-        const category = mapTourCategory(spot.category);
-        if (!category) return null;
-        return { id: spot.tourSpotId, title: spot.title, category };
-      })
-      .filter((option): option is MarkerGroupOption => option !== null);
-
-    setGroupPickerOptions(options);
-  };
-
-  const handleGroupPickerSelect = (targetId: string) => {
-    setGroupPickerOptions(null);
-    navigateToAttraction(targetId);
+    navigateToAttraction(markerId);
   };
 
   const handleVisit = async () => {
@@ -285,18 +282,16 @@ export default function TourVisitPage() {
             selectedMarkerId={attractionId}
             currentLocation={userLocation}
             showLocationButton={false}
-            locationBottom={
-              expanded
-                ? Math.min(600, screenHeight - 196) + 20
-                : TOUR_DETAIL_SHEET_HEIGHT.collapsed + 20
-            }
             onSearchPress={() => router.push({ pathname: '/search/tour', params: { festivalId } })}
             onMarkerPress={handleMarkerPress}
+            onReady={() => setMapReady(true)}
+            onLoadError={() => setMapLoadError(true)}
           />
           <TourDetailBottomSheet
             attraction={attraction}
             expanded={expanded}
             visited={visited}
+            onHeightChange={setDetailSheetHeight}
             onClose={() => {
               // router.canGoBack()이 true를 반환해도 실제 back()이 처리되지 않아
               // GO_BACK 에러가 나는 경우가 있어(#53), 뒤로가기 대신 투어 메인으로
@@ -313,6 +308,14 @@ export default function TourVisitPage() {
               return !!result.coords;
             }}
           />
+
+          {/* 캐시된 상세가 있어도 지도 WebView는 새로 준비해야 한다. 준비 중에는 투어 메인과
+              동일하게 지도·상세 시트를 함께 가리고, 실패하면 TourMap의 재시도 UI를 보여준다. */}
+          {!mapReady && !mapLoadError && (
+            <View style={[StyleSheet.absoluteFill, styles.loadingContainer, styles.pageLoadingOverlay]}>
+              {showMapLoadingIndicator && <LoadingIndicator />}
+            </View>
+          )}
         </>
       )}
 
@@ -350,13 +353,6 @@ export default function TourVisitPage() {
       />
 
       <LocationProblemModal problem={locationProblem} purpose="visit" onClose={() => setLocationProblem(null)} />
-
-      <MarkerGroupPicker
-        visible={groupPickerOptions !== null}
-        options={groupPickerOptions ?? []}
-        onSelect={handleGroupPickerSelect}
-        onClose={() => setGroupPickerOptions(null)}
-      />
     </View>
   );
 }
@@ -371,6 +367,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pageLoadingOverlay: {
+    backgroundColor: Colors.gray.gray20,
   },
   notFoundContainer: {
     flex: 1,

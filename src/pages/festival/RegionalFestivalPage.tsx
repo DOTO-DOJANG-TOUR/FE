@@ -206,13 +206,6 @@ export const RegionalFestivalPage = ({
             )}
             onEndReached={fetchMoreFestivals}
             onEndReachedThreshold={0.5}
-            ListFooterComponent={
-              isFetchingMore ? (
-                <View style={styles.footerLoading}>
-                  <PageLoadingIndicator />
-                </View>
-              ) : null
-            }
           />
         </>
       ) : (
@@ -265,10 +258,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 2,
     paddingBottom: 10,
-  },
-  footerLoading: {
-    paddingVertical: 20,
-    alignItems: 'center',
   },
   emptyContainer: {
     flex: 1,

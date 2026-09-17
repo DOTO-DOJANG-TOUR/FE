@@ -256,13 +256,6 @@ export default function SearchPage({
               )}
               onEndReached={fetchMoreFestivalResults}
               onEndReachedThreshold={0.5}
-              ListFooterComponent={
-                isFetchingMore ? (
-                  <View style={styles.footerLoading}>
-                    <PageLoadingIndicator />
-                  </View>
-                ) : null
-              }
             />
           ) : (
             <View style={styles.emptyContainer}>
@@ -438,9 +431,5 @@ const styles = StyleSheet.create({
 
   separator: {
     height: 10,
-  },
-  footerLoading: {
-    paddingVertical: 20,
-    alignItems: 'center',
   },
 });
