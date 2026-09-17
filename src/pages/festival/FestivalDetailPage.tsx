@@ -18,7 +18,7 @@ import { useCurrentLocation } from '@/hooks/use-current-location';
 import { DojangTourButtonStatus, FestivalDetail } from '@/types/festival';
 import { mapDojangTourStatus } from '@/utils/dojangStatus';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ImageBackground, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -34,12 +34,19 @@ export default function FestivalDetailPage({
     const [pageLoading, setPageLoading] = useState(true);
     const [failedImageUri, setFailedImageUri] = useState<string | undefined>();
     const [isStopModalVisible, setIsStopModalVisible] = useState(false);
-    // 투어 시작 API 응답을 기다리는 동안(+탭 이동 전까지) 화면이 멈춘 것처럼 보이지 않도록
-    // 페이지 전체를 로딩으로 덮는다.
+    // 투어 시작 API 응답을 기다리는 동안 버튼을 로딩 상태로 바꿔 연타를 막는다.
     const [isStartingTour, setIsStartingTour] = useState(false);
     const {
         requestLocation,
     } = useCurrentLocation();
+
+    // 위치 권한 확인·투어 시작 API 응답을 기다리는 동안 사용자가 뒤로가기 등으로 화면을
+    // 떠나도 비동기 흐름 자체는 계속 실행된다 — 화면을 떠난 뒤에 router.push나 상태 갱신이
+    // 뒤늦게 실행되지 않도록 화면이 살아있는지 확인하는 용도로만 쓴다.
+    const isMountedRef = useRef(true);
+    useEffect(() => () => {
+        isMountedRef.current = false;
+    }, []);
 
     const [failedRequest, setFailedRequest] = useState<{
         retry: () => void;
@@ -222,6 +229,8 @@ export default function FestivalDetailPage({
             const data =
                 await getFestivalDojangTourStatus(festivalId);
 
+            if (!isMountedRef.current) return;
+
             setDojangStatus(
                 mapDojangTourStatus(data.status),
             );
@@ -245,6 +254,8 @@ export default function FestivalDetailPage({
                     error
                 );
 
+                if (!isMountedRef.current) return;
+
                 if (isRetryableError(error)) {
                     setFailedRequest({
                         retry: handleStartTour,
@@ -262,6 +273,11 @@ export default function FestivalDetailPage({
                 return;
             }
 
+            // 이미 화면을 떠났다면 여기서 멈춘다 — 투어 시작 자체는 서버에 이미 반영됐으니
+            // 되돌리지 않지만(별도 취소 API가 없다), 떠난 화면에서 뒤늦게 투어 탭으로
+            // 강제 이동시키는 것만은 막는다. 투어 탭은 다음에 들어갈 때 스스로 다시 조회한다.
+            if (!isMountedRef.current) return;
+
             // 투어 시작은 이미 서버에 반영됐으므로, 이후 상태 재조회가 실패하더라도 이동은
             // 그대로 진행한다. GET /api/v1/stamp-tour가 festivalId 없이도 현재 진행 중인
             // 투어를 내려주므로 파라미터 없이 이동해도 Tour 탭이 알아서 다시 조회한다.
@@ -269,7 +285,7 @@ export default function FestivalDetailPage({
 
             await refreshDojangStatus();
         } finally {
-            setIsStartingTour(false);
+            if (isMountedRef.current) setIsStartingTour(false);
         }
     };
 
