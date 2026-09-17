@@ -439,13 +439,6 @@ export const FestivalMainPage = () => {
                             )}
                             onEndReached={fetchMoreTodayFestivals}
                             onEndReachedThreshold={0.5}
-                            ListFooterComponent={
-                                isFetchingTodayMore ? (
-                                    <View style={styles.horizontalLoading}>
-                                        <PageLoadingIndicator />
-                                    </View>
-                                ) : null
-                            }
                         />
                     ) : (
                         <View style={styles.emptyContainer}>
@@ -520,13 +513,6 @@ export const FestivalMainPage = () => {
                             )}
                             onEndReached={fetchMoreUpcomingFestivals}
                             onEndReachedThreshold={0.5}
-                            ListFooterComponent={
-                                isFetchingUpcomingMore ? (
-                                    <View style={styles.horizontalLoading}>
-                                        <PageLoadingIndicator />
-                                    </View>
-                                ) : null
-                            }
                         />
                     ) : (
                         <View style={styles.emptyContainer}>
@@ -588,11 +574,6 @@ const styles = StyleSheet.create({
     },
     horizontalPadding: {
         paddingHorizontal: 20,
-    },
-    horizontalLoading: {
-        width: 50,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     emptyContainer: {
         paddingTop: 60,
