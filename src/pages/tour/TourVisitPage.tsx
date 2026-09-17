@@ -4,6 +4,7 @@ import { startTourSpotVisit } from '@/apis/tourVisit';
 import { LoadingIndicator } from '@/components/common/LoadingIndicator';
 import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
 import { useCurrentLocation } from '@/hooks/use-current-location';
+import { useLiveLocationWatch } from '@/hooks/use-live-location-watch';
 import type { LocationProblem } from '@/utils/locationPolicy';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { TourDetailBottomSheet } from '@/components/tour/TourDetailBottomSheet';
@@ -35,6 +36,7 @@ export default function TourVisitPage() {
   }>();
 
   const { coords: userLocation, checkLocation, requestLocation } = useCurrentLocation();
+  const liveLocation = useLiveLocationWatch();
   const [locationProblem, setLocationProblem] = useState<LocationProblem | null>(null);
   const [mapLocationProblem, setMapLocationProblem] = useState<LocationProblem | null>(null);
   const [isLocationButtonLoading, setIsLocationButtonLoading] = useState(false);
@@ -250,8 +252,16 @@ export default function TourVisitPage() {
     setMapLocationProblem(null);
     try {
       const result = await requestLocation();
-      if (result.coords) mapRef.current?.focusOnCurrentLocation(result.coords.lat, result.coords.lng);
-      else setMapLocationProblem(result.problem);
+      if (result.coords) {
+        // 관광지 상세는 마커를 선택할 때와 마찬가지로 바텀시트에 가려지지 않는 영역
+        // 기준으로 중앙 정렬한다(투어 메인은 바텀시트를 뺀 정렬을 안 쓰므로 그대로 둔다).
+        mapRef.current?.focusOnCurrentLocation(
+          result.coords.lat, result.coords.lng, undefined,
+          expanded ? detailSheetHeight ?? 0 : 0,
+        );
+      } else {
+        setMapLocationProblem(result.problem);
+      }
     } finally {
       locationRequestRef.current = false;
       setIsLocationButtonLoading(false);
@@ -299,8 +309,9 @@ export default function TourVisitPage() {
             ref={mapRef}
             markers={markers}
             selectedMarkerId={attractionId}
-            currentLocation={userLocation}
-            locationBottom={sheetLiveHeight + 20}
+            currentLocation={liveLocation ?? userLocation}
+            locationBottom={sheetLiveHeight}
+            locationBottomOffset={20}
             onSearchPress={() => router.push({ pathname: '/search/tour', params: { festivalId } })}
             onLocationPress={handleLocationPress}
             onMarkerPress={handleMarkerPress}
