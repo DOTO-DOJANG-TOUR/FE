@@ -29,10 +29,9 @@ const EXPANDED_MARKER_OFFSET_Y = 36;
 
 export default function TourVisitPage() {
   const router = useRouter();
-  const { attractionId, festivalId, visited: visitedParam } = useLocalSearchParams<{
+  const { attractionId, festivalId } = useLocalSearchParams<{
     attractionId?: string;
     festivalId?: string;
-    visited?: string;
   }>();
 
   const { coords: userLocation, checkLocation, requestLocation } = useCurrentLocation();
@@ -44,7 +43,6 @@ export default function TourVisitPage() {
   const locationRequestRef = useRef(false);
   useEffect(() => { void checkLocation(); }, [checkLocation]);
   const [expanded, setExpanded] = useState(true);
-  const [visited, setVisited] = useState(visitedParam === '1');
   // 투어 메인 화면에서 이동하기 전에 미리 받아둔 데이터가 있으면(#37, tourSpotCache 참고)
   // 첫 렌더부터 바로 써서 로딩 화면 자체를 건너뛴다.
   const initialCached =
@@ -77,14 +75,12 @@ export default function TourVisitPage() {
   }, [detail]);
 
   // 지도에서 다른 마커를 눌러 attractionId가 바뀌면(같은 화면 인스턴스가 재사용됨) 이전 관광지의
-  // visited/expanded 상태가 남아있지 않도록 렌더 중에 리셋한다(React 공식 "Adjusting state on prop
+  // expanded 상태가 남아있지 않도록 렌더 중에 리셋한다(React 공식 "Adjusting state on prop
   // change" 패턴 — useEffect로 하면 set-state-in-effect 린트에 걸리고 한 프레임 늦게 반영된다).
+  // 방문 여부(visited)는 detail.isVisited에서 그대로 파생하므로 별도로 리셋할 상태가 없다.
   const [prevAttractionId, setPrevAttractionId] = useState(attractionId);
   if (attractionId !== prevAttractionId) {
     setPrevAttractionId(attractionId);
-    // visitedParam은 최초 진입 시점의 값이라 다른 관광지로 전환할 때 그대로 쓰면 안 된다.
-    // 전환된 관광지의 방문 여부를 별도로 조회하지 않으므로 일단 false로 초기화한다.
-    setVisited(false);
     setExpanded(true);
 
     // 이동할 관광지가 이미 캐시에 있으면(다시 보는 마커 등) 바로 반영한다. 없으면 이전 관광지 내용을
@@ -163,6 +159,7 @@ export default function TourVisitPage() {
       imageUrls: detail.imageList.length ? detail.imageList : detail.imageUrl ? [detail.imageUrl] : [],
       phone: detail.phone?.trim() || undefined,
       homepage: detail.homepage?.trim() || undefined,
+      visited: detail.isVisited,
     };
   }, [detail]);
 
@@ -325,7 +322,7 @@ export default function TourVisitPage() {
           <TourDetailBottomSheet
             attraction={attraction}
             expanded={expanded}
-            visited={visited}
+            visited={!!attraction?.visited}
             onHeightChange={setDetailSheetHeight}
             onLiveHeightChange={setSheetLiveHeight}
             onClose={() => {
