@@ -16,7 +16,8 @@ type DojangTourButtonStatus =
   | 'alreadyJoinedTour'
   | 'inOtherTour'
   | 'alreadyEnded'
-  | 'agree';
+  | 'agree'
+  | 'confirm';
 
 type Props = {
   status: DojangTourButtonStatus;
@@ -39,6 +40,7 @@ const statusConfig: Record<DojangTourButtonStatus, { label: string; active: bool
   getReward: { label: '보상 수령하기', active: true },
   alreadyRewarded: { label: '이미 보상을 수령했어요', active: false },
   agree: { label: '동의', active: true },
+  confirm: { label: '확인', active: true },
 };
 
 export const DojangTourButton = ({ status, loading = false, onPress }: Props) => {

@@ -36,6 +36,8 @@ export default function RootLayout() {
     useAgreementStore((state) => state.initialized);
   const hasAgreed =
     useAgreementStore((state) => state.hasAgreed);
+  const hasLocationAgreed =
+    useAgreementStore((state) => state.hasLocationAgreed);
   const initializeAgreement =
     useAgreementStore((state) => state.initialize);
   const agreementInitializedRef = useRef(false);
@@ -182,12 +184,23 @@ export default function RootLayout() {
           >
             <Stack.Screen name="auth-agree" />
           </Stack.Protected>
+          <Stack.Protected
+            guard={
+              status === 'unauthenticated' &&
+              agreementInitialized &&
+              hasAgreed &&
+              !hasLocationAgreed
+            }
+          >
+            <Stack.Screen name="location-agree" />
+          </Stack.Protected>
 
           <Stack.Protected
             guard={
               status === 'unauthenticated' &&
               agreementInitialized &&
-              hasAgreed
+              hasAgreed &&
+              hasLocationAgreed
             }
           >
             <Stack.Screen name="login" />
