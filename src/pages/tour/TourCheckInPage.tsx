@@ -1,12 +1,10 @@
-import { getTourSpotDetail } from '@/apis/tour';
-import { distanceMeters } from '@/utils/geo';
-import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
-import type { LocationProblem } from '@/utils/locationPolicy';
 import { getServerNowMs } from '@/apis/client';
+import { getTourSpotDetail } from '@/apis/tour';
 import { createTourSpotStamp, stopTourSpotVisit } from '@/apis/tourVisit';
 import { AlertModal } from '@/components/common/AlertModal';
 import { DojangTourButton } from '@/components/common/DojangTourButton';
 import { ErrorModal } from '@/components/common/ErrorModal';
+import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
 import {
   CloseIcon,
   VisitCheckIcon,
@@ -18,6 +16,8 @@ import { Colors, FontFamily } from '@/constants/theme';
 import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useTourVisitStore } from '@/stores/tourVisitStore';
 import type { TourSpotDetail } from '@/types/tour';
+import { distanceMeters } from '@/utils/geo';
+import type { LocationProblem } from '@/utils/locationPolicy';
 import { getCachedTourSpot } from '@/utils/tourSpotCache';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -76,7 +76,11 @@ export default function TourCheckInPage() {
   // 컴포넌트가 store의 status 변화를 실제로 반영해 리렌더된 뒤(아래 useEffect)에
   // 이동시킨다 — 루트 레이아웃도 같은 store를 구독하므로 같은 타이밍에 반영된다.
   type PendingNav =
-    | { pathname: '/(tabs)/stamp' }
+    | {
+      pathname: '/(tabs)/stamp'; params?: {
+        openStampDetail?: string;
+      };
+    }
     | { pathname: '/stamp-detail/[id]'; params: { id: string } };
   const [pendingNav, setPendingNav] = useState<PendingNav | null>(null);
 
@@ -101,7 +105,12 @@ export default function TourCheckInPage() {
   const handleStampStatus = () => {
     if (!festivalId) return;
     completeVisit();
-    setPendingNav({ pathname: '/stamp-detail/[id]', params: { id: festivalId } });
+    setPendingNav({
+      pathname: '/(tabs)/stamp',
+      params: {
+        openStampDetail: festivalId,
+      },
+    });
   };
 
   // 방문 시작 직후 이 화면은 라우팅 가드가 스택에서 이전 화면(visit)을 빼버리므로, 기본

@@ -10,8 +10,8 @@ import StampItemCard from "@/components/stamp/StampItemCard";
 import StampQrModal from "@/components/stamp/StampQrModal";
 import { Colors, FontFamily, FontSize, Spacing } from "@/constants/theme";
 import { TourStampListResult } from "@/types/stamp";
-import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -21,6 +21,25 @@ export default function StampPage() {
     const [myStamps, setMyStamps] = useState<TourStampListResult | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [rewardModalVisible, setRewardModalVisible] = useState(false);
+
+    const { openStampDetail } = useLocalSearchParams<{
+        openStampDetail?: string;
+    }>();
+
+    const handledDetailRef = useRef(false);
+
+    useEffect(() => {
+        if (!openStampDetail || handledDetailRef.current) return;
+
+        handledDetailRef.current = true;
+
+        router.push({
+            pathname: '/stamp-detail/[id]',
+            params: {
+                id: openStampDetail,
+            },
+        });
+    }, [openStampDetail, router]);
 
     const [failedRequest, setFailedRequest] = useState<{
         retry: () => void;
