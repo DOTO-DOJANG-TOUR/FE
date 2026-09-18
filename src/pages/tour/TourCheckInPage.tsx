@@ -19,7 +19,7 @@ import type { TourSpotDetail } from '@/types/tour';
 import { distanceMeters } from '@/utils/geo';
 import type { LocationProblem } from '@/utils/locationPolicy';
 import { getCachedTourSpot } from '@/utils/tourSpotCache';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -57,6 +57,10 @@ export default function TourCheckInPage() {
   const expiresAt = useTourVisitStore((state) => state.expiresAt);
   const restore = useTourVisitStore((state) => state.restore);
   const completeVisit = useTourVisitStore((state) => state.complete);
+  const navigation = useNavigation();
+  const [pendingStampDetailId, setPendingStampDetailId] =
+    useState<string | null>(null);
+  const [pendingStampMain, setPendingStampMain] = useState(false);
 
   const [remainingMs, setRemainingMs] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -68,29 +72,6 @@ export default function TourCheckInPage() {
   const arrivalPending = useRef(false);
   const [retryVisible, setRetryVisible] = useState(false);
 
-  // 완료 화면을 나갈 땐 completeVisit()으로 tourVisitStatus를 'idle'로 바꾸는데,
-  // '/(tabs)/*'·'/stamp-detail/[id]' 같은 화면은 그 값이 'idle'일 때만 라우팅 가드에
-  // 등록된다. completeVisit() 직후 곧바로 router.replace를 부르면, 그 상태 변화가
-  // 아직 화면 구성에 반영되기 전이라 대상 화면이 등록 안 된 채로 이동을 시도할 수 있다
-  // (가끔 엉뚱한 화면으로 튕기는 원인으로 의심됨). 그래서 이동을 바로 하지 않고, 이
-  // 컴포넌트가 store의 status 변화를 실제로 반영해 리렌더된 뒤(아래 useEffect)에
-  // 이동시킨다 — 루트 레이아웃도 같은 store를 구독하므로 같은 타이밍에 반영된다.
-  type PendingNav =
-    | {
-      pathname: '/(tabs)/stamp'; params?: {
-        openStampDetail?: string;
-      };
-    }
-    | { pathname: '/stamp-detail/[id]'; params: { id: string } };
-  const [pendingNav, setPendingNav] = useState<PendingNav | null>(null);
-
-  useEffect(() => {
-    if (!pendingNav || status !== 'idle') return;
-    // 이동하면 이 화면은 곧 벗어나므로(가드에 의해 언마운트) pendingNav를 다시
-    // null로 되돌릴 필요는 없다.
-    router.replace(pendingNav);
-  }, [pendingNav, status, router]);
-
   const navigateBack = () => {
     // 딥링크·화면 잠금 해제 직후에는 canGoBack()이 true여도 실제 back stack이 없어
     // GO_BACK 경고가 날 수 있다. 체크인 종료 지점은 항상 투어 메인으로 명시 이동한다.
@@ -99,19 +80,50 @@ export default function TourCheckInPage() {
 
   const handleCompletedClose = () => {
     completeVisit();
-    setPendingNav({ pathname: '/(tabs)/stamp' });
+    setPendingStampMain(true);
   };
+
+  useEffect(() => {
+    if (!pendingStampMain || status !== 'idle') return;
+
+    router.replace('/(tabs)/stamp');
+  }, [pendingStampMain, status, router]);
 
   const handleStampStatus = () => {
     if (!festivalId) return;
     completeVisit();
-    setPendingNav({
-      pathname: '/(tabs)/stamp',
-      params: {
-        openStampDetail: festivalId,
+    setPendingStampDetailId(festivalId);
+  };
+
+  useEffect(() => {
+    if (!pendingStampDetailId || status !== 'idle') return;
+
+    navigation.dispatch({
+      type: 'RESET',
+      payload: {
+        index: 1,
+        routes: [
+          {
+            name: '(tabs)',
+            state: {
+              index: 0,
+              routes: [
+                {
+                  name: 'stamp',
+                },
+              ],
+            },
+          },
+          {
+            name: 'stamp-detail/[id]',
+            params: {
+              id: pendingStampDetailId,
+            },
+          },
+        ],
       },
     });
-  };
+  }, [pendingStampDetailId, status, navigation]);
 
   // 방문 시작 직후 이 화면은 라우팅 가드가 스택에서 이전 화면(visit)을 빼버리므로, 기본
   // 뒤로가기(pop)를 그대로 두면 이미 낡은 화면으로 튕겨 서버 상태와 어긋난다(방문 세션이
