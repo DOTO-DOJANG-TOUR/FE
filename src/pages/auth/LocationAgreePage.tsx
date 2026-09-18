@@ -1,38 +1,31 @@
 import { DojangTourButton } from '@/components/common/DojangTourButton';
 import { DotoLogoIcon } from '@/components/icons';
-import { RightArrowIcon } from '@/components/icons/RightArrowIcon';
 import { Colors, FontFamily, FontSize } from '@/constants/theme';
 import { useAgreementStore } from '@/stores/agreementStore';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const TERMS_URL =
-    'https://doto-stamptour.notion.site/tos';
-
-const PRIVACY_URL =
-    'https://doto-stamptour.notion.site/privacy-policy';
-
-export default function AuthAgreePage() {
+export default function LocationAgreePage() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const agree = useAgreementStore(
-        (state) => state.agree,
+    const agreeLocation = useAgreementStore(
+        (state) => state.agreeLocation,
     );
 
     const [isAgreeing, setIsAgreeing] =
         useState(false);
 
-    const handleAgree = async () => {
+    const handleConfirm = async () => {
         if (isAgreeing) return;
 
         try {
             setIsAgreeing(true);
 
-            await agree();
+            await agreeLocation();
 
-            router.replace('/location-agree')
+            router.replace('/login')
         } catch (error) {
             console.error(
                 '약관 동의 저장 실패:',
@@ -40,14 +33,6 @@ export default function AuthAgreePage() {
             );
 
             setIsAgreeing(false);
-        }
-    };
-
-    const handleOpenPolicy = async (url: string) => {
-        try {
-            await Linking.openURL(url);
-        } catch (error) {
-            console.error('약관 페이지 열기 실패:', error);
         }
     };
 
@@ -62,24 +47,11 @@ export default function AuthAgreePage() {
                 </View>
                 <View style={styles.textBox}>
                     <Text style={styles.text}>
-                        {'편리한 도투 서비스 이용을 위해 약관에 동의해 주세요.\n약관에 동의하지 않는 경우, 서비스 이용이 어렵습니다.'}
+                        {'서비스 제공을 위해 위치정보 접근 권한이 필요합니다. \n위치정보 이용 기능 : 내 위치 표시 및 관광지 방문 인증'}
                     </Text>
                 </View>
-                <View style={styles.agreeBox}>
-                    <Pressable
-                        style={styles.agreeButton}
-                        onPress={() => handleOpenPolicy(TERMS_URL)}
-                    >
-                        <Text style={styles.agreeText}>이용 약관</Text>
-                        <RightArrowIcon />
-                    </Pressable>
-                    <Pressable
-                        style={styles.agreeButton}
-                        onPress={() => handleOpenPolicy(PRIVACY_URL)}
-                    >
-                        <Text style={styles.agreeText}>개인정보 취급방침</Text>
-                        <RightArrowIcon />
-                    </Pressable>
+                <View style={styles.subTextBox}>
+                    <Text style={styles.subText}>* 접근을 허용하지 않더라도 기본 기능을 이용할 수 있습니다.</Text>
                 </View>
             </View>
             <View style={[
@@ -90,9 +62,9 @@ export default function AuthAgreePage() {
                 },
             ]}>
                 <DojangTourButton
-                    status='agree'
+                    status='confirm'
                     loading={isAgreeing}
-                    onPress={handleAgree}
+                    onPress={handleConfirm}
                 />
             </View>
         </SafeAreaView >
@@ -123,23 +95,15 @@ const styles = StyleSheet.create({
         color: Colors.gray.gray80,
         lineHeight: FontSize.md * 1.5,
     },
-    agreeBox: {
-        width: '100%',
+    subTextBox: {
         paddingHorizontal: 20,
-        paddingTop: 30,
-        gap: 8,
+        paddingTop: 8,
     },
-    agreeButton: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        minHeight: 44,
-    },
-    agreeText: {
-        color: Colors.gray.gray100,
-        fontFamily: FontFamily.semiBold,
-        fontSize: FontSize.md,
-        lineHeight: FontSize.md * 1.5,
+    subText: {
+        color: Colors.gray.gray70,
+        fontFamily: FontFamily.regular,
+        fontSize: FontSize.sm,
+        lineHeight: FontSize.sm * 1.5,
     },
     dojangSection: {
         paddingHorizontal: 20,
