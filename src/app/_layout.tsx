@@ -1,6 +1,7 @@
 import { setSessionExpiredHandler } from '@/apis/client';
 import { AuthLoadingScreen } from '@/components/auth/AuthLoadingScreen';
 import { TourVisitRestoreErrorScreen } from '@/components/tour/TourVisitRestoreErrorScreen';
+import { useAgreementStore } from '@/stores/agreementStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useTourVisitStore } from '@/stores/tourVisitStore';
 import { useFonts } from 'expo-font';
@@ -30,6 +31,21 @@ export default function RootLayout() {
 
   const splashTransitionStartedRef = useRef(false);
   const [initialSplashFinished, setInitialSplashFinished] = useState(false);
+
+  const agreementInitialized =
+    useAgreementStore((state) => state.initialized);
+  const hasAgreed =
+    useAgreementStore((state) => state.hasAgreed);
+  const initializeAgreement =
+    useAgreementStore((state) => state.initialize);
+  const agreementInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (agreementInitializedRef.current) return;
+
+    agreementInitializedRef.current = true;
+    initializeAgreement();
+  }, [initializeAgreement]);
 
   const handleSplashLayout = async () => {
     if (splashTransitionStartedRef.current) return;
@@ -108,6 +124,10 @@ export default function RootLayout() {
   const appReady =
     (loaded || !!fontError) &&
     status !== 'initializing' &&
+    (
+      status === 'authenticated' ||
+      agreementInitialized
+    ) &&
     !restoringTourVisit;
 
   const ready =
@@ -153,7 +173,23 @@ export default function RootLayout() {
         value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}
       >
         <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Protected guard={status === 'unauthenticated'}>
+          <Stack.Protected
+            guard={
+              status === 'unauthenticated' &&
+              agreementInitialized &&
+              !hasAgreed
+            }
+          >
+            <Stack.Screen name="auth-agree" />
+          </Stack.Protected>
+
+          <Stack.Protected
+            guard={
+              status === 'unauthenticated' &&
+              agreementInitialized &&
+              hasAgreed
+            }
+          >
             <Stack.Screen name="login" />
           </Stack.Protected>
           <Stack.Protected
