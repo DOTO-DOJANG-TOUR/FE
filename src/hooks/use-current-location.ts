@@ -10,20 +10,6 @@ export type RequestLocationResult = {
   problem: LocationProblem | null;
 };
 
-type LocationSnapshot = {
-  coords: { lat: number; lng: number };
-  accuracy: number;
-  timestamp: number;
-};
-
-let lastPreciseLocation: LocationSnapshot | null = null;
-
-export function getRecentLocationSnapshot(maxAgeMs: number): LocationSnapshot | null {
-  if (!lastPreciseLocation) return null;
-  const ageMs = Date.now() - lastPreciseLocation.timestamp;
-  return ageMs >= 0 && ageMs <= maxAgeMs ? lastPreciseLocation : null;
-}
-
 const initialState: RequestLocationResult = {
   coords: null, permission: 'undetermined', canAskAgain: true, problem: null,
 };
@@ -59,11 +45,6 @@ export function useCurrentLocation() {
         timeout = setTimeout(() => reject(new Error('Location timeout')), 15000);
       })]).finally(() => clearTimeout(timeout));
       result.coords = { lat: position.coords.latitude, lng: position.coords.longitude };
-      lastPreciseLocation = {
-        coords: result.coords,
-        accuracy: Math.max(0, position.coords.accuracy ?? 0),
-        timestamp: Number.isFinite(position.timestamp) ? position.timestamp : Date.now(),
-      };
       return result;
     } catch {
       result.problem = 'unavailable';
