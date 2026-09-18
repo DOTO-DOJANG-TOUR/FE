@@ -1,20 +1,20 @@
 import { ApiError, isRetryableError, NetworkOfflineError } from '@/apis/client';
 import { getTourSpotDetail, getTourSpots } from '@/apis/tour';
 import { startTourSpotVisit } from '@/apis/tourVisit';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { LoadingIndicator } from '@/components/common/LoadingIndicator';
 import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
-import { useCurrentLocation } from '@/hooks/use-current-location';
-import { useLiveLocationWatch } from '@/hooks/use-live-location-watch';
-import type { LocationProblem } from '@/utils/locationPolicy';
-import { ErrorModal } from '@/components/common/ErrorModal';
 import { TourDetailBottomSheet } from '@/components/tour/TourDetailBottomSheet';
 import { TourMap, type TourMapHandle, type TourMapMarker } from '@/components/tour/TourMap';
 import { Colors } from '@/constants/theme';
 import { mapTourCategory } from '@/constants/tourCategory';
+import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useDelayedLoading } from '@/hooks/use-delayed-loading';
+import { useLiveLocationWatch } from '@/hooks/use-live-location-watch';
 import { useTourVisitStore } from '@/stores/tourVisitStore';
 import type { TourAttraction, TourCategory, TourContent, TourSpotDetail } from '@/types/tour';
 import { declutterCoordinates, type GeoPoint } from '@/utils/geo';
+import type { LocationProblem } from '@/utils/locationPolicy';
 import { getCachedTourSpot, setCachedTourSpot } from '@/utils/tourSpotCache';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -279,7 +279,7 @@ export default function TourVisitPage() {
         tourSpotName: response.tourSpotName,
         expiresAt: response.expiresAt,
       });
-      router.push('/check-in');
+      router.replace('/check-in');
     } catch (error) {
       if (error instanceof ApiError && DUPLICATE_VISIT_ERROR_CODES.has(error.code ?? '')) {
         setDuplicateVisitMessage(error.message);
