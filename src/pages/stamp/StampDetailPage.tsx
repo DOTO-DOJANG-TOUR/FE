@@ -43,7 +43,7 @@ export default function FestivalDetailPage({
   // 갈아치우는 화면이라 canGoBack()이 true여도 실제로는 낡은(값이 비워진) 체크인
   // 화면으로 튕기는 경우가 있어(#92), 뒤로가기는 항상 도장 탭으로 명시 이동한다 —
   // 목록에서 들어온 경우도 어차피 그 목록 화면이 도장 탭이라 결과는 같다.
-  const navigateBack = () => router.back();
+  const navigateBack = () => router.replace('/(tabs)/stamp');
 
   /**useFocusEffect(
     useCallback(() => {
