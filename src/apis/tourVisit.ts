@@ -1,4 +1,4 @@
-import type { CurrentVisitTourSpot, Stamp, StampLocation } from '@/types/tour';
+import type { CurrentVisitTourSpot, Stamp } from '@/types/tour';
 import { apiFetch } from './client';
 
 export const startTourSpotVisit = async (
@@ -32,13 +32,10 @@ export const getCurrentVisitTourSpot = async (): Promise<CurrentVisitTourSpot | 
 export const createTourSpotStamp = async (
   festivalId: string,
   tourSpotId: string,
-  location: StampLocation,
 ): Promise<Stamp> => {
+  // 300m 도착 여부는 기기에서 판정하며 사용자의 GPS 원좌표는 서버에 전송하지 않는다.
   return apiFetch<Stamp>(
     `/api/v1/festival/${festivalId}/tour-spots/${tourSpotId}/stamps`,
-    {
-      method: 'POST',
-      body: JSON.stringify(location),
-    },
+    { method: 'POST' },
   );
 };

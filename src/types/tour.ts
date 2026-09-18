@@ -51,11 +51,6 @@ export type CurrentVisitTourSpot = {
   expiresAt: string;
 };
 
-export type StampLocation = {
-  mapX: number;
-  mapY: number;
-};
-
 export type Stamp = {
   stampId: string;
 };

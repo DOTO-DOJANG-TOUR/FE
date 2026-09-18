@@ -2,7 +2,7 @@ import { getTourSpotDetail } from '@/apis/tour';
 import { distanceMeters } from '@/utils/geo';
 import { LocationProblemModal } from '@/components/tour/LocationProblemModal';
 import type { LocationProblem } from '@/utils/locationPolicy';
-import { ApiError, getServerNowMs } from '@/apis/client';
+import { getServerNowMs } from '@/apis/client';
 import { createTourSpotStamp, stopTourSpotVisit } from '@/apis/tourVisit';
 import { AlertModal } from '@/components/common/AlertModal';
 import { DojangTourButton } from '@/components/common/DojangTourButton';
@@ -15,7 +15,7 @@ import {
   VisitPinShadowIcon,
 } from '@/components/tour/TourIcons';
 import { Colors, FontFamily } from '@/constants/theme';
-import { getRecentLocationSnapshot, useCurrentLocation } from '@/hooks/use-current-location';
+import { useCurrentLocation } from '@/hooks/use-current-location';
 import { useTourVisitStore } from '@/stores/tourVisitStore';
 import type { TourSpotDetail } from '@/types/tour';
 import { getCachedTourSpot } from '@/utils/tourSpotCache';
@@ -26,8 +26,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const MAX_VISIT_DURATION_MS = 7 * 60 * 60 * 1000;
 const ARRIVAL_RADIUS_M = 300;
-const RECENT_LOCATION_MAX_AGE_MS = 10_000;
-const RECENT_LOCATION_MOVEMENT_BUFFER_M = 100;
 
 function getTourSpotPoint(spot: TourSpotDetail | null) {
   if (!spot?.mapY?.trim() || !spot.mapX?.trim()) return null;
@@ -183,22 +181,10 @@ export default function TourCheckInPage() {
     setLocationProblem(null);
     try {
       const cachedSpot = getCachedTourSpot(festivalId, tourSpotId)?.detail ?? null;
-      const cachedTarget = getTourSpotPoint(cachedSpot);
-      const recentLocation = getRecentLocationSnapshot(RECENT_LOCATION_MAX_AGE_MS);
 
-      // 방문 시작 직전에 얻은 고정밀 좌표로도 명백히 범위 밖이면 OS GPS와 API를 다시
-      // 기다리지 않는다. 정확도 오차와 이동 여유분은 거리에서 제외해 경계 근처는 반드시
-      // 아래의 새 GPS 및 서버 판정으로 확인한다.
-      if (cachedTarget && recentLocation &&
-        distanceMeters(recentLocation.coords, cachedTarget) >
-          ARRIVAL_RADIUS_M + recentLocation.accuracy + RECENT_LOCATION_MOVEMENT_BUFFER_M) {
-        const active = useTourVisitStore.getState();
-        if (expirationHandledRef.current || active.tourSpotId !== tourSpotId || active.status !== 'active') return;
-        setTooFarVisible(true);
-        return;
-      }
-
-      // 캐시가 없는 복원 진입에서도 GPS와 관광지 상세 API를 병렬로 기다린다.
+      // 버튼을 누른 시점의 현재 GPS를 매번 새로 조회한다. 방문 시작 시점이나 지도에서
+      // 얻은 이전 좌표로 선제 판정하면, 사용자가 이동한 뒤에도 잘못 거절될 수 있다.
+      // 캐시가 없는 복원 진입에서는 GPS와 관광지 상세 API를 병렬로 기다린다.
       const [result, spot] = await Promise.all([
         requestLocation(),
         cachedSpot ? Promise.resolve(cachedSpot) : getTourSpotDetail(festivalId, tourSpotId),
@@ -224,16 +210,9 @@ export default function TourCheckInPage() {
         return;
       }
 
-      await createTourSpotStamp(festivalId, tourSpotId, {
-        mapX: result.coords.lng,
-        mapY: result.coords.lat,
-      });
+      await createTourSpotStamp(festivalId, tourSpotId);
       setCompleted(true);
-    } catch (error) {
-      if (error instanceof ApiError && error.code === 'STAMP-400-001') {
-        setTooFarVisible(true);
-        return;
-      }
+    } catch {
       setRetryVisible(true);
     } finally {
       // 위치 권한 요청 자체가 예외를 던져도 버튼이 영구 비활성화되지 않게 한다.
