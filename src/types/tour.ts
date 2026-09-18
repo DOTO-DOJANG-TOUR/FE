@@ -17,6 +17,9 @@ export type TourSpotDetail = TourContent & {
   phone?: string;
   homepage?: string;
   apiModifiedAt: string;
+  // 8차 QA(#99) 대응으로 백엔드가 추가하기로 한 필드 — 배포 전까지는 응답에 아예
+  // 없을 수 있어 optional로 두고, 없으면 false(미방문)로 취급한다.
+  isVisited?: boolean;
 };
 
 // GET /api/v1/stamp-tour 응답. tourSpots는 축제 위치 기준 거리순으로 내려오고

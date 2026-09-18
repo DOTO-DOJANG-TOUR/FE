@@ -58,5 +58,6 @@ export const getTourSpotDetail = async (
     phone: asString(raw.phone) || undefined,
     homepage: asString(raw.homepage) || undefined,
     apiModifiedAt: asString(raw.apiModifiedAt),
+    isVisited: raw.isVisited === true,
   };
 };
